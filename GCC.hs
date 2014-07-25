@@ -11,13 +11,14 @@ trim = f . f
    where f = reverse . dropWhile isSpace
 
 type Int32 = Int
-data Addr = AbsAddr Int | RefAddr String
+type Addr = Int
+data AddrOrLabel = AbsAddr Addr | RefAddr String
 
-instance Show Addr where
+instance Show AddrOrLabel where
   show (AbsAddr n) = show n
   show (RefAddr label) = label
 
-instance Read Addr where
+instance Read AddrOrLabel where
   readsPrec _ value =
     let v = dropWhile isSpace value in
     let ds = takeWhile isDigit v in
@@ -32,22 +33,22 @@ data Instruction = LDC Int32 |
                    ADD | SUB | MUL | DIV | CEQ | CGT | CGTE |
                    ATOM |
                    CONS | CAR | CDR |
-                   SEL Addr Addr |
+                   SEL AddrOrLabel AddrOrLabel |
                    JOIN |
-                   LDF Addr |
+                   LDF AddrOrLabel |
                    AP Int |
                    RTN |
                    DUM Int |
                    RAP Int |
                    STOP |
-                   TSEL Addr Addr |
+                   TSEL AddrOrLabel AddrOrLabel |
                    TAP Int |
                    TRAP Int |
                    DBUG |
                    BRK
 
 instance Show Instruction where
-  show (LDC i) = "LDC  " ++ show i
+  show (LDC n) = "LDC  " ++ show n
   show (LD i j) = "LD   " ++ show i ++ " " ++ show j
   show (ST i j) = "ST   " ++ show i ++ " " ++ show j
   show (ADD) = "ADD"
@@ -76,7 +77,7 @@ instance Show Instruction where
   show (BRK) = "BRK"
 
 parseInstruction :: String -> [String] -> Instruction
-parseInstruction "LDC" [i] = LDC (read i)
+parseInstruction "LDC" [n] = LDC (read n)
 parseInstruction "LD" [i, j] = LD (read i) (read j)
 parseInstruction "ST" [i, j] = ST (read i) (read j)
 parseInstruction "ADD" [] = ADD
