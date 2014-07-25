@@ -3,6 +3,7 @@ module GCC where
 import Text.Regex.Posix
 import Data.Maybe
 import Data.Char
+import Data.List
 import Control.Monad
 
 trim :: String -> String
@@ -124,10 +125,38 @@ lineToMaybeInstructionOrLabel s =
         Just $ Instruction $ parseInstruction w ws
 
 stripComment :: String -> String
-stripComment s = s =~ "^[^;]*"
+stripComment = takeWhile (/= ';')
 
 readAsmWithLabels :: FilePath -> IO ProgramWithLabels
 readAsmWithLabels filename = liftM (catMaybes . map lineToMaybeInstructionOrLabel . map stripComment . lines) $ readFile filename
 
 writeAsmWithLabels :: FilePath -> ProgramWithLabels -> IO ()
 writeAsmWithLabels filename = writeFile filename . unlines . map show
+
+writeAsm :: FilePath -> Program -> IO ()
+writeAsm filename = writeFile filename . unlines . map show
+
+assemble :: ProgramWithLabels -> Program
+assemble p = assemble' (buildSymtab 0 p) p
+  where
+    buildSymtab n p =
+      case p of
+        [] -> []
+        (Instruction _):p' -> buildSymtab (n + 1) p'
+        (Label label):p' -> (label, n) : buildSymtab n p'
+
+    assemble' symtab p =
+      case p of
+        [] -> []
+        (Instruction i):p' -> assembleInstruction symtab i : assemble' symtab p'
+        (Label _):p' -> assemble' symtab p'
+
+    assembleInstruction symtab (SEL a1 a2) = SEL (lookupLabel symtab a1) (lookupLabel symtab a2)
+    assembleInstruction symtab (LDF a) = LDF (lookupLabel symtab a)
+    assembleInstruction symtab (TSEL a1 a2) = TSEL (lookupLabel symtab a1) (lookupLabel symtab a2)
+    assembleInstruction symtab i = i
+
+    lookupLabel symtab a =
+      case a of
+        RefAddr label -> AbsAddr $ fromJust $ lookup label symtab
+        AbsAddr _ -> a
