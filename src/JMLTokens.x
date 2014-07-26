@@ -49,7 +49,7 @@ tokens :-
    @op1                                  { \p -> \s -> TokenOperator1 s }
    @op2                                  { \p -> \s -> TokenOperator2 s }
 
-   [0-9]+                                { \p -> \s -> TokenNumber (read s) }
+   [\-]?[0-9]+                           { \p -> \s -> TokenNumber (read s) }
    true                                  { \p -> \s -> TokenBool True }
    false                                 { \p -> \s -> TokenBool False }
    [a-zA-Z][a-zA-Z_\'0-9]*               { \p -> \s -> TokenIdentifier s }
