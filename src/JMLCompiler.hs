@@ -3,6 +3,7 @@ module JMLCompiler where
 import Data.List
 import Types
 import GCC
+import Control.Monad.State
 
 elimBoolsExpr :: Expr -> Expr
 elimBoolsExpr e = case e of
@@ -130,16 +131,25 @@ extractFuncs e ctx =
     allocLabel :: [(Int, a)] -> Int
     allocLabel ctx = maximum (0 : map fst ctx) + 1
 
-compileExpr :: String -> IExpr -> ProgramWithLabels
+compileExpr :: String -> IExpr -> State Int ProgramWithLabels
 compileExpr fnname e =
   case e of
-    INumber n -> [Instruction $ LDC n]
-    IIdentifier i j -> [Instruction $ LD i j]
-    IPair e1 e2 -> compileExpr fnname e1 ++ compileExpr fnname e2 ++ [Instruction $ CONS]
+    INumber n -> return [Instruction $ LDC n]
+    IIdentifier i j -> return [Instruction $ LD i j]
+    IPair e1 e2 ->
+      do p1 <- compileExpr fnname e1
+         p2 <- compileExpr fnname e2
+         return $ p1 ++ p2 ++ [Instruction $ CONS]
     IOperator1 Not e -> undefined -- There shouldn't be any booleans left at this point
-    IOperator1 Fst e -> compileExpr fnname e ++ [Instruction $ CAR]
-    IOperator1 Snd e -> compileExpr fnname e ++ [Instruction $ CDR]
-    IOperator1 Break e -> compileExpr fnname e ++ [Instruction $ BRK]
+    IOperator1 Fst e ->
+      do p <- compileExpr fnname e
+         return $ p ++ [Instruction $ CAR]
+    IOperator1 Snd e ->
+      do p <- compileExpr fnname e
+         return $ p ++ [Instruction $ CDR]
+    IOperator1 Break e ->
+      do p <- compileExpr fnname e
+         return $ p ++ [Instruction $ BRK]
     IOperator2 op e1 e2 ->
       case op of
         Plus -> stack2Op ADD
@@ -155,25 +165,44 @@ compileExpr fnname e =
         And -> undefined -- There shouldn't be any booleans left at this point
         Or -> undefined -- There shouldn't be any booleans left at this point
       where
-        stack2Op insn = compileExpr fnname e1 ++ compileExpr fnname e2 ++ [Instruction $ insn]
-        stack2OpRev insn = compileExpr fnname e2 ++ compileExpr fnname e1 ++ [Instruction $ insn]
-    ITrace e1 e2 -> compileExpr fnname e1 ++ [Instruction $ DBUG] ++ compileExpr fnname e2
+        stack2Op insn =
+          do p1 <- compileExpr fnname e1
+             p2 <- compileExpr fnname e2
+             return $ p1 ++ p2 ++ [Instruction $ insn]
+        stack2OpRev insn =
+          do p1 <- compileExpr fnname e2
+             p2 <- compileExpr fnname e1
+             return $ p1 ++ p2 ++ [Instruction $ insn]
+    ITrace e1 e2 ->
+      do p1 <- compileExpr fnname e1
+         p2 <- compileExpr fnname e2
+         return $ p1 ++ [Instruction $ DBUG] ++ p2
     IIf e1 e2 e3 ->
-      let lt = "true" in -- XXX allocate fresh labels
-      let lf = "false" in
-      let le = "end" in
-      compileExpr fnname e1 ++ [Instruction $ SEL (RefAddr lt) (RefAddr lf)] ++
-        [Instruction $ LDC 0, Instruction $ TSEL (RefAddr le) (RefAddr le)] ++
-        [Label lt] ++ compileExpr fnname e2 ++ [Instruction $ JOIN] ++
-        [Label lf] ++ compileExpr fnname e3 ++ [Instruction $ JOIN] ++
-        [Label le]
+      do n <- get
+         let lt = fnname ++ "_true" ++ show n
+         let lf = fnname ++ "_false" ++ show n
+         let le = fnname ++ "_end" ++ show n
+         put (n + 1)
+         p1 <- compileExpr fnname e1
+         p2 <- compileExpr fnname e2
+         p3 <- compileExpr fnname e3
+         return $ p1 ++ [Instruction $ SEL (RefAddr lt) (RefAddr lf)] ++
+           [Instruction $ LDC 0, Instruction $ TSEL (RefAddr le) (RefAddr le)] ++
+           [Label lt] ++ p2 ++ [Instruction $ JOIN] ++
+           [Label lf] ++ p3 ++ [Instruction $ JOIN] ++
+           [Label le]
     IFn label ->
       let lf = fnname ++ "_fn" ++ show label in
-      [Instruction $ LDF (RefAddr lf)]
-    IApp e es -> concat (map (compileExpr fnname) es) ++ compileExpr fnname e ++ [Instruction $ AP (length es)]
+      return [Instruction $ LDF (RefAddr lf)]
+    IApp e es ->
+      do ps <- liftM concat $ mapM (compileExpr fnname) es
+         p <- compileExpr fnname e
+         return $ ps ++ p ++ [Instruction $ AP (length es)]
 
 compileFunctionBody :: String -> String -> IExpr -> ProgramWithLabels
-compileFunctionBody fnname label ie = [Label $ label] ++ compileExpr fnname ie ++ [Instruction $ RTN]
+compileFunctionBody fnname label ie =
+  let (p, _) = runState (compileExpr fnname ie) 0 in
+  [Label $ label] ++ p ++ [Instruction $ RTN]
 
 compileFunDecl :: [[Identifier]] -> Identifier -> Expr -> ProgramWithLabels
 compileFunDecl bindings id e =
