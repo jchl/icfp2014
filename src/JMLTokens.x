@@ -31,6 +31,7 @@ tokens :-
    fn                                    { \p -> \s -> TokenFn }
    fun                                   { \p -> \s -> TokenFun }
    val                                   { \p -> \s -> TokenVal }
+   main                                  { \p -> \s -> TokenMain }
    if                                    { \p -> \s -> TokenIf }
    then                                  { \p -> \s -> TokenThen }
    else                                  { \p -> \s -> TokenElse }
@@ -60,6 +61,7 @@ data Token = TokenOpenParen
            | TokenFn
            | TokenFun
            | TokenVal
+           | TokenMain
            | TokenIf
            | TokenThen
            | TokenElse

@@ -4,13 +4,6 @@ import Data.List
 import Types
 import GCC
 
-elimBools :: JmlProgram -> JmlProgram
-elimBools p =
-  case p of
-    [] -> []
-    (FunDecl id pats e):p' -> (FunDecl id pats (elimBoolsExpr e)) : elimBools p'
-    (ValDecl pats e):p' -> (ValDecl pats (elimBoolsExpr e)) : elimBools p'
-
 elimBoolsExpr :: Expr -> Expr
 elimBoolsExpr e = case e of
   Number n -> Number n
@@ -179,10 +172,25 @@ compileExpr e =
       [Instruction $ LDF (RefAddr lf)]
     IApp e es -> concat (map compileExpr es) ++ compileExpr e ++ [Instruction $ AP (length es)]
 
-compileFunction :: (Int, IExpr) -> ProgramWithLabels
-compileFunction (label, ie) = [Label $ "fn" ++ show label] ++ compileExpr ie ++ [Instruction $ RTN]
+compileFunctionBody :: (Int, IExpr) -> ProgramWithLabels
+compileFunctionBody (label, ie) = [Label $ "fn" ++ show label] ++ compileExpr ie ++ [Instruction $ RTN]
+
+compileFunDecl :: [[Identifier]] -> Identifier -> Expr -> ProgramWithLabels
+compileFunDecl bindings id e =
+  let (ie, labeledIes) = (flip extractFuncs [] . flip toDeBruin bindings . elimBoolsExpr) e in
+  compileFunctionBody (0, ie) ++ concat (map compileFunctionBody labeledIes)
 
 compileJml :: JmlProgram -> ProgramWithLabels
-compileJml [ValDecl p e] =
-  let (ie, labeledIes) = (flip extractFuncs [] . flip toDeBruin [] . elimBoolsExpr) e in
-  compileFunction (0, ie) ++ concat (map compileFunction labeledIes)
+compileJml (ds, MainDecl mainPats e) = [Instruction $ DUM (length recFuncs)] ++
+                                       map (\lf -> Instruction $ LDF (RefAddr lf)) recFuncs ++
+                                       [Instruction $ RAP (length recFuncs), Instruction $ RTN] ++
+                                       compileFunDecl [recFuncs, mainPats] "main" e ++
+                                       concat (map compileDecl ds)
+  where
+    recFuncs = gatherRecFuncs [] ds
+
+    gatherRecFuncs fs [] = reverse fs
+    gatherRecFuncs fs ((FunDecl id pats e):ds') = gatherRecFuncs (id:fs) ds'
+    gatherRecFuncs fs (_:ds') = gatherRecFuncs fs ds'
+
+    compileDecl (FunDecl id pats e) = compileFunDecl [pats, recFuncs, mainPats] id e

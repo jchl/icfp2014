@@ -18,6 +18,7 @@ import Types
   fn      { TokenFn }
   fun     { TokenFun }
   val     { TokenVal }
+  main    { TokenMain }
   if      { TokenIf }
   then    { TokenThen }
   else    { TokenElse }
@@ -33,17 +34,20 @@ import Types
 
 %%
 
-Program : Declaration Program      { $1 : $2 }
-        | Declaration              { [$1] }
+Program : Declarations MainDecl     { ($1, $2) }
 
+Declarations : Declaration Declarations { $1 : $2 }
+             |                          { [] }
 Declaration : FunDecl              { $1 }
             | ValDecl              { $1 }
 
 FunDecl : fun id Pats '=>' Exp     { FunDecl $2 $3 $5 }
 ValDecl : val Pat '=' Exp          { ValDecl $2 $4 }
 
+MainDecl : main Pats '=' Exp       { MainDecl $2 $4 }
+
 Pats : Pat Pats                    { $1 : $2 }
-     | Pat                         { [$1] }
+     |                             { [] }
 Pat : id                           { $1 }
 
 Exp : num                          { Number $1 }

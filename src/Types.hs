@@ -73,7 +73,10 @@ data Declaration = FunDecl Identifier [Pat] Expr |
                    ValDecl Pat Expr
                    deriving Show
 
-type JmlProgram = [Declaration]
+data MainDecl = MainDecl [Pat] Expr
+                deriving Show
+
+type JmlProgram = ([Declaration], MainDecl)
 
 ops2Map = [
   ( "+", Plus ),
