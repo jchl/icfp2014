@@ -27,27 +27,28 @@ fromJoin (VJoin a) = a
 
 type EnvPtr = [Env]
 data Env = Env [Value] |
-           Dummy Int
+           Dummy
            deriving Show
 
-type CpuState = (Addr, [Value], [Value], EnvPtr)
+type CpuState = (Addr, [Value], [Value], EnvPtr, Maybe [Value])
 
 liftOp1 :: (Value -> Value) -> CpuState -> Maybe CpuState
-liftOp1 op (c, x:s, d, e) = Just (c + 1, op x : s, d, e)
+liftOp1 op (c, x:s, d, e, ed) = Just (c + 1, op x : s, d, e, ed)
 
 liftOp2 :: (Value -> Value -> Value) -> CpuState -> Maybe CpuState
-liftOp2 op (c, y:x:s, d, e) = Just (c + 1, op x y : s, d, e)
+liftOp2 op (c, y:x:s, d, e, ed) = Just (c + 1, op x y : s, d, e, ed)
 
 intop :: (Int32 -> Int32 -> Int32) -> (Value -> Value -> Value)
 intop op (VInt x) (VInt y) = VInt (op x y)
 
-loadEnv :: Env -> Int -> Value
-loadEnv (Env vs) i = vs !! i
+loadEnv :: Env -> Maybe [Value] -> Int -> Value
+loadEnv (Env vs) edummy i = vs !! i
+loadEnv Dummy (Just vs) i = vs !! i
 
 sim :: Instruction -> CpuState -> Maybe CpuState
-sim (LDC n) = \(c, s, d, e) -> Just (c + 1, VInt n : s, d, e)
-sim (LD n i) = \(c, s, d, e) -> Just (c + 1, loadEnv (e !! n) i: s, d, e)
-sim (ST n 1) = \(c, s, d, e) -> undefined
+sim (LDC n) = \(c, s, d, e, ed) -> Just (c + 1, VInt n : s, d, e, ed)
+sim (LD n i) = \(c, s, d, e, ed) -> Just (c + 1, loadEnv (e !! n) ed i: s, d, e, ed)
+sim (ST n 1) = \(c, s, d, e, ed) -> undefined
 sim (ADD) = liftOp2 $ intop (+)
 sim (SUB) = liftOp2 $ intop (-)
 sim (MUL) = liftOp2 $ intop (*)
@@ -59,25 +60,25 @@ sim (ATOM) = liftOp1 (\x -> if isInt x then VInt 1 else VInt 2)
 sim (CONS) = liftOp2 (\x y -> VCons x y)
 sim (CAR) = liftOp1 (\(VCons x _) -> x)
 sim (CDR) = liftOp1 (\(VCons _ y) -> y)
-sim (SEL (AbsAddr a1) (AbsAddr a2)) = \(c, cond:s, d, e) -> Just (if fromInt cond /= 0 then a1 else a2, s, VJoin (c + 1) : d, e)
-sim (JOIN) = \(c, s, (VJoin c'):d, e) -> Just (c', s, d, e)
-sim (LDF (AbsAddr a)) = \(c, s, d, e) -> Just (c + 1, VClosure a e : s, d, e)
-sim (AP n) = \(c, (VClosure f e'):s, d, e) -> Just (f, drop n s, (VRet (c + 1)):(VEnv e):d, (Env (reverse $ take n s)):e')
+sim (SEL (AbsAddr a1) (AbsAddr a2)) = \(c, cond:s, d, e, ed) -> Just (if fromInt cond /= 0 then a1 else a2, s, VJoin (c + 1) : d, e, ed)
+sim (JOIN) = \(c, s, (VJoin c'):d, e, ed) -> Just (c', s, d, e, ed)
+sim (LDF (AbsAddr a)) = \(c, s, d, e, ed) -> Just (c + 1, VClosure a e : s, d, e, ed)
+sim (AP n) = \(c, (VClosure f e'):s, d, e, ed) -> Just (f, drop n s, (VRet (c + 1)):(VEnv e):d, (Env (reverse $ take n s)):e', ed)
 sim (RTN) = doReturn
   where
-    doReturn (c, s, (VRet c'):(VEnv e'):d, e) = Just (c', s, d, e')
-    doReturn (c, s, [], e) = Nothing -- XXX too general!
-sim (DUM n) = \(c, s, d, e) -> Just (c + 1, s, d, (Dummy n):e)
-sim (RAP n) = \(c, s, d, e) -> undefined
-sim (STOP) = \(c, s, d, e) -> undefined
-sim (TSEL (AbsAddr a1) (AbsAddr a2)) = \(c, cond:s, d, e) -> Just (if fromInt cond /= 0 then a1 else a2, s, d, e)
-sim (TAP n) = \(c, s, d, e) -> undefined
-sim (TRAP n) = \(c, s, d, e) -> undefined
-sim (DBUG) = \(c, v:s, d, e) -> Just (c + 1, s, d, e) -- XXX also print the value of v
-sim (BRK) = \(c, s, d, e) -> Just (c + 1, s, d, e) -- XXX also drop into the debugger
+    doReturn (c, s, (VRet c'):(VEnv e'):d, e, ed) = Just (c', s, d, e', ed)
+    doReturn (c, s, [], e, ed) = Nothing -- XXX too general!
+sim (DUM n) = \(c, s, d, e, Nothing) -> Just (c + 1, s, d, Dummy:e, Just (replicate n undefined))
+sim (RAP n) = \(c, s, d, e, ed) -> undefined
+sim (STOP) = \(c, s, d, e, ed) -> undefined
+sim (TSEL (AbsAddr a1) (AbsAddr a2)) = \(c, cond:s, d, e, ed) -> Just (if fromInt cond /= 0 then a1 else a2, s, d, e, ed)
+sim (TAP n) = \(c, s, d, e, ed) -> undefined
+sim (TRAP n) = \(c, s, d, e, ed) -> undefined
+sim (DBUG) = \(c, v:s, d, e, ed) -> Just (c + 1, s, d, e, ed) -- XXX also print the value of v
+sim (BRK) = \(c, s, d, e, ed) -> Just (c + 1, s, d, e, ed) -- XXX also drop into the debugger
 
 simulator :: [Instruction] -> CpuState -> IO CpuState
-simulator code state@(c, _, _, _) =
+simulator code state@(c, _, _, _, _) =
   let insn = code !! c in
   do print state -- XXX debugging trace
      print insn
@@ -88,5 +89,5 @@ simulator code state@(c, _, _, _) =
 
 simpleSim :: [Instruction] -> IO CpuState
 simpleSim code =
-  do state' <- simulator code (0, [], [], [])
+  do state' <- simulator code (0, [], [], [], Nothing)
      return $ state'
