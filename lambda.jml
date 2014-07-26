@@ -15,7 +15,10 @@ const fruit = 4
 const lambda_start = 5
 const ghost_start = 6
 
-fun mod4 move = if move > 3 then move - 4 else (if move < 0 then move + 4 else move)
+const followRight = 0
+const followLeft = 1
+
+fun mod4 move = if move > 3 then move - 4 else if move < 0 then move + 4 else move
 
 fun opposite move = mod4 (move + 2)
 fun turnright move = mod4 (move + 1)
@@ -26,6 +29,7 @@ fun length xs = if null xs then 0 else 1 + length (tail xs)
 fun nth n xs = if n == 0 then head xs else nth (n - 1) (tail xs)
 
 fun getcell' map x y = nth x (nth y map)
+
 fun getcell map loc =
   let (x, y) = loc in
     nth x (nth y map)
@@ -39,19 +43,34 @@ fun offset loc dir =
       (if dir == right then (x + 1, y) else (x, y))))
   end
 
+fun eqLoc loc1 loc2 =
+  let (x1, y1) = loc1 in
+  let (x2, y2) = loc2 in
+    x1 == x2 and y1 == y2
+  end
+  end
+
 fun stepper state world =
   let (map, myStatus, ghostsStatus, fruitTime) = world in
   let (myVitality, myLocation, myDirection, lives, score) = myStatus in
-  let (myX, myY) = myLocation in
-  trace (myLocation, getcell map myLocation) in
-  let (oldMove, xx) = state in
+  trace (1, myLocation, getcell map myLocation) in
+  let (oldMove, followMode, startLocation) = state in
+  let followMode = if eqLoc startLocation myLocation then 1 - followMode else followMode in
+  trace followMode in
   let move =
-    if (getcell map (offset myLocation oldMove)) != wall then oldMove else
-     (if (getcell map (offset myLocation (turnright oldMove))) != wall then (turnright oldMove) else
-      (if (getcell map (offset myLocation (turnleft oldMove))) != wall then (turnleft oldMove) else
-       opposite oldMove)) in
-  let state = (move, xx) in
-    (state, move)
+    if followMode == followRight then
+      if getcell map (offset myLocation (turnright oldMove)) != wall then turnright oldMove
+      else if getcell map (offset myLocation oldMove) != wall then oldMove
+      else if getcell map (offset myLocation (turnleft oldMove)) != wall then turnleft oldMove
+      else {opposite} oldMove
+   else
+      if getcell map (offset myLocation (turnleft oldMove)) != wall then turnleft oldMove
+      else if getcell map (offset myLocation oldMove) != wall then oldMove
+      else if getcell map (offset myLocation (turnright oldMove)) != wall then turnright oldMove
+      else {opposite} oldMove in
+  let state = (move, followMode, startLocation) in
+    trace (state, move) in (state, move) end
+  end
   end
   end
   end
@@ -61,6 +80,12 @@ fun stepper state world =
   end
 
 main world ghosts =
-  let state = (down, []) in
+  let (map, myStatus, ghostsStatus, fruitTime) = world in
+  let (myVitality, myLocation, myDirection, lives, score) = myStatus in
+  trace (0, myLocation, getcell map myLocation) in
+  let state = (down, followRight, myLocation) in
     (state, stepper)
+  end
+  end
+  end
   end
