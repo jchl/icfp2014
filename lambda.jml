@@ -26,12 +26,19 @@ fun turnleft move = mod4 (move - 1)
 
 fun length xs = if null xs then 0 else 1 + length (tail xs)
 
-fun map f xs = if null xs then [] else f (head xs) :: map f (tail xs)
+fun map f xs = if null xs then [] else (f (head xs)) :: (map f (tail xs))
 
 fun fold f y xs = if null xs then y else fold f (f y (head xs)) (tail xs)
 
 fun all xs = fold (fn a b => a and b) true xs
 fun any xs = fold (fn a b => a or b) false xs
+
+fun revappend xs ys = if null xs then ys else revappend (tail xs) ((head xs) :: ys)
+fun rev xs = revappend xs []
+
+fun append xs ys = if null xs then ys else (head xs) :: (append (tail xs) ys)
+
+fun concat xs = if null xs then [] else append (head xs) (concat (tail xs))
 
 fun nth n xs = if n == 0 then head xs else nth (n - 1) (tail xs)
 
@@ -64,8 +71,9 @@ fun eqLoc loc1 loc2 =
 fun okDir maze ghostLocs ghostNextLocs myVitality myLocation dir = ; Shouldn't avoid ghosts when in fright mode
   let newLocation = offset myLocation dir in
     (getcell maze newLocation != wall) and
-    (not (any (map (fn loc => trace (loc, newLocation) in eqLoc newLocation loc end) ghostLocs))) and
-    (not (any (map (fn loc => trace (loc, newLocation) in eqLoc newLocation loc end) ghostNextLocs)))
+    ((myVitality > 300) or ; fudge factor!
+     ((not (any (map (fn loc => eqLoc newLocation loc) ghostLocs))) and
+      (not (any (map (fn loc => eqLoc newLocation loc) ghostNextLocs)))))
   end
 
 fun stepper state world =
@@ -83,7 +91,7 @@ fun stepper state world =
     let fwdOk = okDir maze ghostLocs ghostNextLocs myVitality myLocation oldMove in
     let rightOk = okDir maze ghostLocs ghostNextLocs myVitality myLocation (turnright oldMove) in
     let leftOk = okDir maze ghostLocs ghostNextLocs myVitality myLocation (turnleft oldMove) in
-    trace (fwdOk, rightOk, leftOk) in
+;    trace (fwdOk, rightOk, leftOk) in
     if not (rightOk or leftOk or fwdOk) then opposite oldMove
     else if fwdOk then
       if leftOk and (randbool randsrc) then turnleft oldMove
@@ -94,7 +102,7 @@ fun stepper state world =
       else turnright oldMove
     else
       turnleft oldMove
-    end
+;    end
     end
     end
     end in
