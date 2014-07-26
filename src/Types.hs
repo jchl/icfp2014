@@ -32,6 +32,7 @@ data Expr = Number Int |
             Operator2 Op2 Expr Expr |
             If Expr Expr Expr |
             Fn [Pat] Expr |
+            App Expr [Expr] |
             Let [Pat] Expr Expr
 
 data Declaration = FunDecl Identifier [Pat] Expr |

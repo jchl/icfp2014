@@ -54,7 +54,11 @@ Exp : num                          { Number $1 }
     | Exp op2 Exp                  { Operator2 (stringToOp2 $2) $1 $3 }
     | if Exp then Exp else Exp     { If $2 $4 $6 }
     | fn Pats '=>' Exp             { Fn $2 $4 }
+    | Exp Exps                     { App $1 $2 }
     | let Pats '=' Exp in Exp end  { Let $2 $4 $6 }
+
+Exps : Exp Exps                    { $1 : $2 }
+     | Exp                         { [$1] }
 
 {
 

@@ -24,6 +24,7 @@ elimBoolsExpr e = case e of
   Operator2 op e1 e2 -> Operator2 op (elimBoolsExpr e1) (elimBoolsExpr e2)
   If e1 e2 e3 -> If (elimBoolsExpr e1) (elimBoolsExpr e2) (elimBoolsExpr e3)
   Fn pats e -> Fn pats (elimBoolsExpr e)
+  App e es -> App (elimBoolsExpr e) (map elimBoolsExpr es)
   Let pats e1 e2 -> Let pats (elimBoolsExpr e1) (elimBoolsExpr e2)
 
 compileExpr :: Expr -> ProgramWithLabels
@@ -64,4 +65,5 @@ compileExpr e =
         [Label lf] ++ compileExpr e3 ++ [Instruction $ JOIN] ++
         [Label le]
     Fn pats e -> undefined
+    App e es -> undefined
     Let pats e1 e2 -> undefined
