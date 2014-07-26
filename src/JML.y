@@ -59,10 +59,10 @@ Pat : id                           { $1 }
 
 Exp : num                          { Number $1 }
     | bool                         { Boolean $1 }
+    | '(' Exp ',' ExpsWithCommasPlus ')' { Tuple ($2 : $4) }
     | '[' ExpsWithCommas ']'       { List $2 }
     | id                           { Identifier (makeIdentifier $1) }
     | '(' Exp ')'                  { $2 }
-    | '(' Exp ',' Exp ')'          { Pair $2 $4 }
     | op1 Exp                      { Operator1 (stringToOp1 $1) $2 }
     | trace Exp in Exp end         { Trace $2 $4 }
     | Exp op2 Exp                  { Operator2 (stringToOp2 $2) $1 $3 }
@@ -77,6 +77,10 @@ Exps : Exp Exps                    { $1 : $2 }
 ExpsWithCommas : Exp ',' ExpsWithCommas { $1 : $3 }
                | Exp                    { [$1] }
                |                        { [] }
+
+ExpsWithCommasPlus : Exp ',' ExpsWithCommasPlus { $1 : $3 }
+                   | Exp ','                    { [$1] }
+                   | Exp                        { [$1] }
 
 {
 

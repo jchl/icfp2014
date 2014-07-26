@@ -56,6 +56,7 @@ type Pat = Identifier
 
 data Expr = Number Int |
             Boolean Bool |
+            Tuple [Expr] |
             List [Expr] |
             Identifier Identifier |
             Pair Expr Expr |
@@ -70,6 +71,7 @@ data Expr = Number Int |
 instance Show Expr where
   show (Number n) = show n
   show (Boolean b) = show b
+  show (Tuple es) = "(" ++ intercalate ", " (map show es) ++ ")"
   show (List es) = show es
   show (Identifier id) = id
   show (Pair e1 e2) = show (e1, e2)

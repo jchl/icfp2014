@@ -5,14 +5,11 @@ import Types
 import GCC
 import Control.Monad.State
 
-listToPair :: [Expr] -> Expr
-listToPair [] = Number 0
-listToPair (e:es) = Pair e (listToPair es)
-
 substConsts :: [ConstDecl] -> Expr -> Expr
 substConsts consts e = case e of
   Number n -> Number n
   Boolean b -> Boolean b
+  Tuple es -> Tuple (map (substConsts consts) es)
   List es -> List (map (substConsts consts) es)
   Identifier id ->
     case lookup id consts of
@@ -27,30 +24,40 @@ substConsts consts e = case e of
   App e es -> App (substConsts consts e) (map (substConsts consts) es)
   Let pat e1 e2 -> Let pat (substConsts consts e1) (substConsts consts e2)
 
-desugarLists :: Expr -> Expr
-desugarLists e = case e of
+listToPair :: [Expr] -> Expr
+listToPair [] = Number 0
+listToPair (e:es) = Pair e (listToPair es)
+
+tupleToPair :: [Expr] -> Expr
+tupleToPair [e1] = e1
+tupleToPair (e:es) = Pair e (tupleToPair es)
+
+desugarListsAndTuples :: Expr -> Expr
+desugarListsAndTuples e = case e of
   Number n -> Number n
   Boolean b -> Boolean b
-  List es -> listToPair es
+  Tuple es -> tupleToPair (map desugarListsAndTuples es)
+  List es -> listToPair (map desugarListsAndTuples es)
   Identifier id -> Identifier id
-  Pair e1 e2 -> Pair (desugarLists e1) (desugarLists e2)
-  Operator1 Null e -> Operator1 Atom (desugarLists e)
-  Operator1 Head e -> Operator1 Fst (desugarLists e)
-  Operator1 Tail e -> Operator1 Snd (desugarLists e)
-  Operator1 op e -> Operator1 op (desugarLists e)
-  Operator2 ListCons e1 e2 -> Pair (desugarLists e1) (desugarLists e2)
-  Operator2 op e1 e2 -> Operator2 op (desugarLists e1) (desugarLists e2)
-  Trace e1 e2 -> Trace (desugarLists e1) (desugarLists e2)
-  If e1 e2 e3 -> If (desugarLists e1) (desugarLists e2) (desugarLists e3)
-  Fn pats e -> Fn pats (desugarLists e)
-  App e es -> App (desugarLists e) (map desugarLists es)
-  Let pat e1 e2 -> Let pat (desugarLists e1) (desugarLists e2)
+  Pair e1 e2 -> Pair (desugarListsAndTuples e1) (desugarListsAndTuples e2)
+  Operator1 Null e -> Operator1 Atom (desugarListsAndTuples e)
+  Operator1 Head e -> Operator1 Fst (desugarListsAndTuples e)
+  Operator1 Tail e -> Operator1 Snd (desugarListsAndTuples e)
+  Operator1 op e -> Operator1 op (desugarListsAndTuples e)
+  Operator2 ListCons e1 e2 -> Pair (desugarListsAndTuples e1) (desugarListsAndTuples e2)
+  Operator2 op e1 e2 -> Operator2 op (desugarListsAndTuples e1) (desugarListsAndTuples e2)
+  Trace e1 e2 -> Trace (desugarListsAndTuples e1) (desugarListsAndTuples e2)
+  If e1 e2 e3 -> If (desugarListsAndTuples e1) (desugarListsAndTuples e2) (desugarListsAndTuples e3)
+  Fn pats e -> Fn pats (desugarListsAndTuples e)
+  App e es -> App (desugarListsAndTuples e) (map desugarListsAndTuples es)
+  Let pat e1 e2 -> Let pat (desugarListsAndTuples e1) (desugarListsAndTuples e2)
 
 elimBoolsExpr :: Expr -> Expr
 elimBoolsExpr e = case e of
   Number n -> Number n
   Boolean True -> Number 1
   Boolean False -> Number 0
+  Tuple _ -> undefined -- There shouldn't be any tuples left at this point
   List _ -> undefined -- There shouldn't be any lists left at this point
   Identifier id -> Identifier id
   Pair e1 e2 -> Pair (elimBoolsExpr e1) (elimBoolsExpr e2)
@@ -84,6 +91,8 @@ toDeBruin e bindings =
     Identifier id ->
       let (i, j) = lookupIdent bindings id in
       BIdentifier i j
+    Tuple _ -> undefined -- There shouldn't be any tuples left at this point
+    List _ -> undefined -- There shouldn't be any lists left at this point
     Pair e1 e2 ->
       let be1 = toDeBruin e1 bindings in
       let be2 = toDeBruin e2 bindings in
@@ -255,7 +264,7 @@ compileFunctionBody fnname label ie =
 
 compileFunDecl :: [ConstDecl] -> [[Identifier]] -> Identifier -> Expr -> ProgramWithLabels
 compileFunDecl consts bindings id e =
-  let (ie, labeledIes) = (flip extractFuncs [] . flip toDeBruin bindings . elimBoolsExpr . desugarLists . substConsts consts) e in
+  let (ie, labeledIes) = (flip extractFuncs [] . flip toDeBruin bindings . elimBoolsExpr . desugarListsAndTuples . substConsts consts) e in
   compileFunctionBody id id ie ++ concat (map (\(label, ie) -> compileFunctionBody id (id ++ "_fn" ++ show label) ie) labeledIes)
 
 compileJml :: JmlProgram -> ProgramWithLabels
