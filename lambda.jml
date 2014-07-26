@@ -28,6 +28,8 @@ fun length xs = if null xs then 0 else 1 + length (tail xs)
 
 fun nth n xs = if n == 0 then head xs else nth (n - 1) (tail xs)
 
+fun mod a b = a - ((a / b) * b) ; Not sure if this is right (especially with negative numbers)...
+
 fun getcell' map x y = nth x (nth y map)
 
 fun getcell map loc =
@@ -54,7 +56,7 @@ fun stepper state world =
   let (map, myStatus, ghostsStatus, fruitTime) = world in
   let (myVitality, myLocation, myDirection, lives, score) = myStatus in
 ;  trace (1, myLocation, getcell map myLocation) in
-  let (oldMove, followMode, startLocation, nMoves) = state in
+  let (oldMove, followMode, startLocation, nMoves, randsrc, randsrc_orig) = state in
   let followMode = if eqLoc startLocation myLocation then 1 - followMode else followMode in
 ;  trace followMode in
   let move =
@@ -68,7 +70,7 @@ fun stepper state world =
       else if getcell map (offset myLocation oldMove) != wall then oldMove
       else if getcell map (offset myLocation (turnright oldMove)) != wall then turnright oldMove
       else opposite oldMove in
-  let state = (move, followMode, startLocation, nMoves + 1) in
+  let state = (move, followMode, startLocation, nMoves + 1, randsrc, randsrc_orig) in
     trace (state, move) in (state, move) end
   end
   end
@@ -83,9 +85,11 @@ main world ghosts =
   let (map, myStatus, ghostsStatus, fruitTime) = world in
   let (myVitality, myLocation, myDirection, lives, score) = myStatus in
 ;  trace (0, myLocation, getcell map myLocation) in
-  let state = (down, followRight, myLocation, 0) in
+  let randsrc = [74382,2783,89234,234,892,23487,874,829043,7862,294,2094,29,2095,29083,2098,257,81,89,91,890453,234] in
+  let state = (down, followRight, myLocation, 0, randsrc, randsrc) in
     (state, stepper)
   end
 ;  end
+  end
   end
   end
