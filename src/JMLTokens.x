@@ -17,8 +17,7 @@ module JMLTokens (Token(..), jmlLex) where
    and
    |or
    |[\+ \- \* \/ \< \>]
-   |==
-   |!=
+   |[\= \! \< \>]=
    |::
 
 tokens :-
