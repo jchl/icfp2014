@@ -52,7 +52,7 @@ tokens :-
    [0-9]+                                { \p -> \s -> TokenNumber (read s) }
    true                                  { \p -> \s -> TokenBool True }
    false                                 { \p -> \s -> TokenBool False }
-   [a-zA-Z][a-zA-Z_0-9]*                 { \p -> \s -> TokenIdentifier s }
+   [a-zA-Z][a-zA-Z_\'0-9]*               { \p -> \s -> TokenIdentifier s }
 
 {
 
