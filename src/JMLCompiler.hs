@@ -172,18 +172,20 @@ compileExpr e =
       [Instruction $ LDF (RefAddr lf)]
     IApp e es -> concat (map compileExpr es) ++ compileExpr e ++ [Instruction $ AP (length es)]
 
-compileFunctionBody :: (Int, IExpr) -> ProgramWithLabels
-compileFunctionBody (label, ie) = [Label $ "fn" ++ show label] ++ compileExpr ie ++ [Instruction $ RTN]
+compileFunctionBody :: String -> IExpr -> ProgramWithLabels
+compileFunctionBody label ie = [Label $ label] ++ compileExpr ie ++ [Instruction $ RTN]
 
 compileFunDecl :: [[Identifier]] -> Identifier -> Expr -> ProgramWithLabels
 compileFunDecl bindings id e =
   let (ie, labeledIes) = (flip extractFuncs [] . flip toDeBruin bindings . elimBoolsExpr) e in
-  compileFunctionBody (0, ie) ++ concat (map compileFunctionBody labeledIes)
+  compileFunctionBody id ie ++ concat (map (\(label, ie) -> compileFunctionBody (id ++ "_fn" ++ show label) ie) labeledIes)
 
 compileJml :: JmlProgram -> ProgramWithLabels
 compileJml (ds, MainDecl mainPats e) = [Instruction $ DUM (length recFuncs)] ++
                                        map (\lf -> Instruction $ LDF (RefAddr lf)) recFuncs ++
-                                       [Instruction $ RAP (length recFuncs), Instruction $ RTN] ++
+                                       [Instruction $ LDF (RefAddr "main"),
+                                        Instruction $ RAP (length recFuncs),
+                                        Instruction $ RTN] ++
                                        compileFunDecl [recFuncs, mainPats] "main" e ++
                                        concat (map compileDecl ds)
   where

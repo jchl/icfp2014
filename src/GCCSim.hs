@@ -69,7 +69,7 @@ sim (RTN) = doReturn
     doReturn (c, s, (VRet c'):(VEnv e'):d, e, ed) = Just (c', s, d, e', ed)
     doReturn (c, s, [], e, ed) = Nothing -- XXX too general!
 sim (DUM n) = \(c, s, d, e, Nothing) -> Just (c + 1, s, d, Dummy:e, Just (replicate n undefined))
-sim (RAP n) = \(c, s, d, e, ed) -> undefined
+sim (RAP n) = \(c, (VClosure f (Dummy:e')):s, d, Dummy:e, ed) -> Just (f, drop n s, (VRet (c + 1)):(VEnv e):d, Dummy:e', Just (reverse $ take n s))
 sim (STOP) = \(c, s, d, e, ed) -> undefined
 sim (TSEL (AbsAddr a1) (AbsAddr a2)) = \(c, cond:s, d, e, ed) -> Just (if fromInt cond /= 0 then a1 else a2, s, d, e, ed)
 sim (TAP n) = \(c, s, d, e, ed) -> undefined
