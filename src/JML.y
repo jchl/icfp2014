@@ -66,10 +66,12 @@ AtExp : num                                { Number $1 }
       | let LetPat '=' Exp in Exp end      { Let $2 $4 $6 }
       | trace Exp in Exp end               { Trace $2 $4 }
 
-OpExp : AtExp                             { $1 }
-      | op1 AtExp                         { Operator1 (stringToOp1 $1) $2 }
-      | AtExp op2 OpExp                   { Operator2 (stringToOp2 $2) $1 $3 }
-      | AtExp AtExps                      { App $1 $2 }
+AppExp : AtExp                             { $1 }
+       | AtExp AtExps                      { App $1 $2 }
+
+OpExp : AppExp                             { $1 }
+      | op1 AppExp                         { Operator1 (stringToOp1 $1) $2 }
+      | AppExp op2 OpExp                   { Operator2 (stringToOp2 $2) $1 $3 }
 
 Exp : OpExp                        { $1 }
     | fn Pats '=>' Exp             { Fn $2 $4 }
