@@ -77,28 +77,23 @@ fun eqLoc loc1 loc2 =
   end
   end
 
-; fun selectDirection fwdScore rightScore leftScore =
-
-fun okDir maze ghostLocs ghostNextLocs myVitality myLocation dir = ; Shouldn't avoid ghosts when in fright mode
-  let newLocation = offset myLocation dir in
-    (getcell maze newLocation != wall) and
-    ((myVitality > 300) or ; fudge factor!
-     ((not (any (map (fn loc => eqLoc newLocation loc) ghostLocs))) and
-      (not (any (map (fn loc => eqLoc newLocation loc) ghostNextLocs)))))
-  end
-
-fun likeDir maze myLocation dir =
+fun dirScore maze ghostLocs ghostNextLocs myVitality myLocation dir =
   let newLocation = offset myLocation dir in
   let contents = getcell maze newLocation in
-    (contents == pill) or (contents == power)
+  let isGhost =
+     (any (map (fn loc => eqLoc newLocation loc) ghostLocs)) or
+     (any (map (fn loc => eqLoc newLocation loc) ghostNextLocs)) in
+;  trace (newLocation, contents, isGhost) in
+  let score =
+    if (contents == wall) or
+        ((myVitality < 300 {fudge factor!}) and isGhost) then 0
+    else if isGhost then 10
+    else if (contents == pill) then 3
+    else if (contents == power) then 4
+    else 2 in
+    (score, dir)
   end
-  end
-
-fun dirScore maze ghostLocs ghostNextLocs myVitality myLocation dir =
-  let ok = okDir maze ghostLocs ghostNextLocs myVitality myLocation dir in
-  let like = likeDir maze myLocation dir in
-  let s = if ok then (if like then 3 else 2) else 0 in
-    (s, dir)
+;  end
   end
   end
   end
