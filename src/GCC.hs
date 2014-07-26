@@ -131,6 +131,17 @@ stripComment = takeWhile (/= ';')
 readAsmWithLabels :: FilePath -> IO ProgramWithLabels
 readAsmWithLabels filename = liftM (catMaybes . map lineToMaybeInstructionOrLabel . map stripComment . lines) $ readFile filename
 
+{-
+numberInstructionsOrLabels :: ProgramWithLabels -> [Either (Instruction, Int) String]
+numberInstructionsOrLabels = numberInstructionsOrLabels' 0
+  where
+    numberInstructionsOrLabels' n p =
+      case p of
+        [] -> []
+        (Instruction i):p' -> (Left (i, n)) : numberInstructionsOrLabels' (n + 1) p'
+        (Label l):p' -> (Right l) : numberInstructionsOrLabels' n p'
+-}
+
 writeAsmWithLabels :: FilePath -> ProgramWithLabels -> IO ()
 writeAsmWithLabels filename = writeFile filename . unlines . map show
 

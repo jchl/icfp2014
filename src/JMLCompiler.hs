@@ -24,6 +24,7 @@ elimBoolsExpr e = case e of
   Operator2 Or e1 e2 -> If (elimBoolsExpr e1) (Boolean True) (elimBoolsExpr e2)
   Operator2 NotEquals e1 e2 -> elimBoolsExpr (Operator1 Not (Operator2 Equals e1 e2))
   Operator2 op e1 e2 -> Operator2 op (elimBoolsExpr e1) (elimBoolsExpr e2)
+  Trace e1 e2 -> Trace (elimBoolsExpr e1) (elimBoolsExpr e2)
   If e1 e2 e3 -> If (elimBoolsExpr e1) (elimBoolsExpr e2) (elimBoolsExpr e3)
   Fn pats e -> Fn pats (elimBoolsExpr e)
   App e es -> App (elimBoolsExpr e) (map elimBoolsExpr es)
@@ -34,6 +35,7 @@ data BExpr = BNumber Int |
              BPair BExpr BExpr |
              BOperator1 Op1 BExpr |
              BOperator2 Op2 BExpr BExpr |
+             BTrace BExpr BExpr |
              BIf BExpr BExpr BExpr |
              BFn BExpr |
              BApp BExpr [BExpr]
@@ -57,6 +59,10 @@ toDeBruin e bindings =
       let be1 = toDeBruin e1 bindings in
       let be2 = toDeBruin e2 bindings in
       BOperator2 op be1 be2
+    Trace e1 e2 ->
+      let be1 = toDeBruin e1 bindings in
+      let be2 = toDeBruin e2 bindings in
+      BTrace be1 be2
     If e1 e2 e3 ->
       let be1 = toDeBruin e1 bindings in
       let be2 = toDeBruin e2 bindings in
@@ -87,6 +93,7 @@ data IExpr = INumber Int |
              IPair IExpr IExpr |
              IOperator1 Op1 IExpr |
              IOperator2 Op2 IExpr IExpr |
+             ITrace IExpr IExpr |
              IIf IExpr IExpr IExpr |
              IFn Int |
              IApp IExpr [IExpr]
@@ -107,6 +114,10 @@ extractFuncs e ctx =
       let (ie1, ctx1) = extractFuncs e1 ctx in
       let (ie2, ctx2) = extractFuncs e2 ctx1 in
       (IOperator2 op ie1 ie2, ctx2)
+    BTrace e1 e2 ->
+      let (ie1, ctx1) = extractFuncs e1 ctx in
+      let (ie2, ctx2) = extractFuncs e2 ctx1 in
+      (ITrace ie1 ie2, ctx2)
     BIf e1 e2 e3 ->
       let (ie1, ctx1) = extractFuncs e1 ctx in
       let (ie2, ctx2) = extractFuncs e2 ctx1 in
@@ -136,7 +147,6 @@ compileExpr e =
     IOperator1 Fst e -> compileExpr e ++ [Instruction $ CAR]
     IOperator1 Snd e -> compileExpr e ++ [Instruction $ CDR]
     IOperator1 Break e -> compileExpr e ++ [Instruction $ BRK]
-    IOperator1 Trace e -> compileExpr e ++ [Instruction $ DBUG]
     IOperator2 op e1 e2 ->
       case op of
         Plus -> stack2Op ADD
@@ -154,6 +164,7 @@ compileExpr e =
       where
         stack2Op insn = compileExpr e1 ++ compileExpr e2 ++ [Instruction $ insn]
         stack2OpRev insn = compileExpr e2 ++ compileExpr e1 ++ [Instruction $ insn]
+    ITrace e1 e2 -> compileExpr e1 ++ [Instruction $ DBUG] ++ compileExpr e2
     IIf e1 e2 e3 ->
       let lt = "true" in -- XXX allocate fresh labels
       let lf = "false" in

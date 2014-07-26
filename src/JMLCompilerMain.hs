@@ -12,4 +12,6 @@ main :: IO ()
 main =
   do [inFilename, outFilename] <- getArgs
      s <- readFile inFilename
-     writeAsmWithLabels outFilename (({- assemble . -} compileJml . parse . jmlLex) s)
+     let p = (parse . jmlLex) s
+     print p
+     writeAsmWithLabels outFilename (({- assemble . -} compileJml) p)

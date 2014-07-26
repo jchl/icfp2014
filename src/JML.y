@@ -24,6 +24,7 @@ import Types
   let     { TokenLet }
   in      { TokenIn }
   end     { TokenEnd }
+  trace   { TokenTrace }
   op1     { TokenOperator1 $$ }
   op2     { TokenOperator2 $$ }
   num     { TokenNumber $$ }
@@ -51,6 +52,7 @@ Exp : num                          { Number $1 }
     | '(' Exp ')'                  { $2 }
     | '(' Exp ',' Exp ')'          { Pair $2 $4 }
     | op1 Exp                      { Operator1 (stringToOp1 $1) $2 }
+    | trace Exp in Exp end         { Trace $2 $4 }
     | Exp op2 Exp                  { Operator2 (stringToOp2 $2) $1 $3 }
     | if Exp then Exp else Exp     { If $2 $4 $6 }
     | fn Pats '=>' Exp             { Fn $2 $4 }

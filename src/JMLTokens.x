@@ -9,7 +9,6 @@ module JMLTokens (Token(..), jmlLex) where
    |snd
    |not
    |break
-   |trace
 
 @op2 =
    and
@@ -38,6 +37,7 @@ tokens :-
    let                                   { \p -> \s -> TokenLet }
    in                                    { \p -> \s -> TokenIn }
    end                                   { \p -> \s -> TokenEnd }
+   trace                                 { \p -> \s -> TokenTrace }
    @op1                                  { \p -> \s -> TokenOperator1 s }
    @op2                                  { \p -> \s -> TokenOperator2 s }
 
@@ -66,6 +66,7 @@ data Token = TokenOpenParen
            | TokenLet
            | TokenIn
            | TokenEnd
+           | TokenTrace
            | TokenOperator1 String
            | TokenOperator2 String
            | TokenNumber Int
