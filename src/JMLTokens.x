@@ -24,6 +24,7 @@ tokens :-
 
    $white+                               ;
    \; .*                                 ;
+   \{ ([\x00-\x10ffff] # \})* \}         ;
 
    \(                                    { \p -> \s -> TokenOpenParen }
    \)                                    { \p -> \s -> TokenCloseParen }

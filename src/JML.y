@@ -98,6 +98,6 @@ makeIdentifier :: String -> Identifier
 makeIdentifier name = name
 
 parseError :: [Token] -> a
-parseError _ = error "Parse error"
+parseError tokens = error $ "Parse error at " ++ show (take 20 tokens)
 
 }
