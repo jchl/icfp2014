@@ -65,7 +65,7 @@ sim (RTN) = doReturn
 sim (DUM n) = \(c, s, d, e) -> Just (c + 1, s, d, (replicate n undefined):e)
 sim (RAP n) = \(c, s, d, e) -> undefined
 sim (STOP) = \(c, s, d, e) -> undefined
-sim (TSEL (AbsAddr a1) (AbsAddr a2)) = \(c, s, d, e) -> undefined
+sim (TSEL (AbsAddr a1) (AbsAddr a2)) = \(c, s, d, e) -> Just (if fromInt (head s) /= 0 then a1 else a2, s, d, e)
 sim (TAP n) = \(c, s, d, e) -> undefined
 sim (TRAP n) = \(c, s, d, e) -> undefined
 sim (DBUG) = \(c, v:s, d, e) -> Just (c + 1, s, d, e) -- XXX also print the value of v

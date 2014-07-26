@@ -159,7 +159,7 @@ compileExpr e =
       let lf = "false" in
       let le = "end" in
       compileExpr e1 ++ [Instruction $ SEL (RefAddr lt) (RefAddr lf)] ++
-        [Instruction $ LDC 0, Instruction $ SEL (RefAddr le) (RefAddr le)] ++
+        [Instruction $ LDC 0, Instruction $ TSEL (RefAddr le) (RefAddr le)] ++
         [Label lt] ++ compileExpr e2 ++ [Instruction $ JOIN] ++
         [Label lf] ++ compileExpr e3 ++ [Instruction $ JOIN] ++
         [Label le]
