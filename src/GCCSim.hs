@@ -44,7 +44,7 @@ sim (ST n 1) = \(c, s, d, e) -> undefined
 sim (ADD) = liftOp2 $ intop (+)
 sim (SUB) = liftOp2 $ intop (-)
 sim (MUL) = liftOp2 $ intop (*)
-sim (DIV) = liftOp2 $ intop quot
+sim (DIV) = liftOp2 $ intop quot -- XXX check division
 sim (CEQ) = liftOp2 $ intop (\x y -> if x == y then 1 else 0)
 sim (CGT) = liftOp2 $ intop (\x y -> if x > y then 1 else 0)
 sim (CGTE) = liftOp2 $ intop (\x y -> if x >= y then 1 else 0)
@@ -63,5 +63,5 @@ sim (STOP) = \(c, s, d, e) -> undefined
 sim (TSEL (AbsAddr a1) (AbsAddr a2)) = \(c, s, d, e) -> undefined
 sim (TAP n) = \(c, s, d, e) -> undefined
 sim (TRAP n) = \(c, s, d, e) -> undefined
-sim (DBUG) = \(c, s, d, e) -> undefined
-sim (BRK) = \(c, s, d, e) -> undefined
+sim (DBUG) = \(c, v:s, d, e) -> (c + 1, s, d, e) -- XXX also print the value of v
+sim (BRK) = \(c, s, d, e) -> (c + 1, s, d, e) -- XXX also drop into the debugger
