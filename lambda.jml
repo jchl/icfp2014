@@ -63,10 +63,22 @@ fun stepper state world =
   let followMode = if eqLoc startLocation myLocation then 1 - followMode else followMode in
 ;  trace followMode in
   let move =
-    if (getcell map (offset myLocation (turnright oldMove)) != wall) and (randbool randsrc) then turnright oldMove
-    else if (getcell map (offset myLocation (turnleft oldMove)) != wall) and (randbool (tail randsrc)) then turnleft oldMove
-    else if getcell map (offset myLocation oldMove) != wall then oldMove
-    else opposite oldMove in
+    let fwdOk = getcell map (offset myLocation oldMove) != wall in
+    let rightOk = getcell map (offset myLocation (turnright oldMove)) != wall in
+    let leftOk = getcell map (offset myLocation (turnleft oldMove)) != wall in
+    if not (rightOk or leftOk or fwdOk) then opposite oldMove
+    else if fwdOk then
+      if leftOk and (randbool randsrc) then turnleft oldMove
+      else if rightOk and (randbool (tail randsrc)) then turnright oldMove
+      else oldMove
+    else if rightOk then
+      if leftOk and (randbool randsrc) then turnleft oldMove
+      else turnright oldMove
+    else
+      turnleft oldMove
+    end
+    end
+    end in
   let state = (move, followMode, startLocation, nMoves + 1, tail randsrc, randsrc_orig) in
     trace (state, move) in (state, move) end
   end
