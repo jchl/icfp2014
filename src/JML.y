@@ -12,6 +12,8 @@ import Types
 %token
   '('     { TokenOpenParen }
   ')'     { TokenCloseParen }
+  '['     { TokenOpenBracket }
+  ']'     { TokenCloseBracket }
   ','     { TokenComma }
   '='     { TokenEquals }
   '=>'    { TokenArrow }
@@ -52,6 +54,7 @@ Pat : id                           { $1 }
 
 Exp : num                          { Number $1 }
     | bool                         { Boolean $1 }
+    | '[' ExpsWithCommas ']'       { List $2 }
     | id                           { Identifier (makeIdentifier $1) }
     | '(' Exp ')'                  { $2 }
     | '(' Exp ',' Exp ')'          { Pair $2 $4 }
@@ -65,6 +68,10 @@ Exp : num                          { Number $1 }
 
 Exps : Exp Exps                    { $1 : $2 }
      | Exp                         { [$1] }
+
+ExpsWithCommas : Exp ',' ExpsWithCommas { $1 : $3 }
+               | Exp                    { [$1] }
+               |                        { [] }
 
 {
 

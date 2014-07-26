@@ -16,6 +16,7 @@ module JMLTokens (Token(..), jmlLex) where
    |[\+ \- \* \/ \< \>]
    |==
    |!=
+   |::
 
 tokens :-
 
@@ -24,6 +25,8 @@ tokens :-
 
    \(                                    { \p -> \s -> TokenOpenParen }
    \)                                    { \p -> \s -> TokenCloseParen }
+   \[                                    { \p -> \s -> TokenOpenBracket }
+   \]                                    { \p -> \s -> TokenCloseBracket }
    \,                                    { \p -> \s -> TokenComma }
    =                                     { \p -> \s -> TokenEquals }
    =>                                    { \p -> \s -> TokenArrow }
@@ -55,6 +58,8 @@ tokenError f (AlexPn char line col) s =
 
 data Token = TokenOpenParen
            | TokenCloseParen
+           | TokenOpenBracket
+           | TokenCloseBracket
            | TokenComma
            | TokenEquals
            | TokenArrow

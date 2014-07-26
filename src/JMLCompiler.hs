@@ -5,11 +5,36 @@ import Types
 import GCC
 import Control.Monad.State
 
+listToPair :: [Expr] -> Expr
+listToPair [] = Number 0
+listToPair (e:es) = Pair e (listToPair es)
+
+desugarLists :: Expr -> Expr
+desugarLists e = case e of
+  Number n -> Number n
+  Boolean True -> Number 1
+  Boolean False -> Number 0
+  List es -> listToPair es
+  Identifier id -> Identifier id
+  Pair e1 e2 -> Pair (desugarLists e1) (desugarLists e2)
+  Operator1 Not e -> Operator2 Minus (Number 1) (desugarLists e)
+  Operator1 op e -> Operator1 op (desugarLists e)
+  Operator2 And e1 e2 -> If (desugarLists e1) (desugarLists e2) (Boolean False)
+  Operator2 Or e1 e2 -> If (desugarLists e1) (Boolean True) (desugarLists e2)
+  Operator2 NotEquals e1 e2 -> desugarLists (Operator1 Not (Operator2 Equals e1 e2))
+  Operator2 op e1 e2 -> Operator2 op (desugarLists e1) (desugarLists e2)
+  Trace e1 e2 -> Trace (desugarLists e1) (desugarLists e2)
+  If e1 e2 e3 -> If (desugarLists e1) (desugarLists e2) (desugarLists e3)
+  Fn pats e -> Fn pats (desugarLists e)
+  App e es -> App (desugarLists e) (map desugarLists es)
+  Let pat e1 e2 -> Let pat (desugarLists e1) (desugarLists e2)
+
 elimBoolsExpr :: Expr -> Expr
 elimBoolsExpr e = case e of
   Number n -> Number n
   Boolean True -> Number 1
   Boolean False -> Number 0
+  List _ -> undefined -- There shouldn't be any lists left at this point
   Identifier id -> Identifier id
   Pair e1 e2 -> Pair (elimBoolsExpr e1) (elimBoolsExpr e2)
   Operator1 Not e -> Operator2 Minus (Number 1) (elimBoolsExpr e)
@@ -206,7 +231,7 @@ compileFunctionBody fnname label ie =
 
 compileFunDecl :: [[Identifier]] -> Identifier -> Expr -> ProgramWithLabels
 compileFunDecl bindings id e =
-  let (ie, labeledIes) = (flip extractFuncs [] . flip toDeBruin bindings . elimBoolsExpr) e in
+  let (ie, labeledIes) = (flip extractFuncs [] . flip toDeBruin bindings . elimBoolsExpr . desugarLists) e in
   compileFunctionBody id id ie ++ concat (map (\(label, ie) -> compileFunctionBody id (id ++ "_fn" ++ show label) ie) labeledIes)
 
 compileJml :: JmlProgram -> ProgramWithLabels
