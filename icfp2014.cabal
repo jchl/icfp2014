@@ -29,6 +29,15 @@ Executable jmlcc
 -- -prof -auto-all
 -- -threaded
 
+Executable gccasm
+  Hs-source-dirs:    src
+  Main-is:           GCCAsmMain.hs
+  Build-depends:     base, array, containers, text, bytestring, time, regex-posix, mtl
+  Other-modules:     GCC
+  Ghc-options:       -O2 -rtsopts
+-- -prof -auto-all
+-- -threaded
+
 Executable gccsim
   Hs-source-dirs:    src
   Main-is:           GCCSimMain.hs
