@@ -130,16 +130,16 @@ extractFuncs e ctx =
     allocLabel :: [(Int, a)] -> Int
     allocLabel ctx = maximum (0 : map fst ctx) + 1
 
-compileExpr :: IExpr -> ProgramWithLabels
-compileExpr e =
+compileExpr :: String -> IExpr -> ProgramWithLabels
+compileExpr fnname e =
   case e of
     INumber n -> [Instruction $ LDC n]
     IIdentifier i j -> [Instruction $ LD i j]
-    IPair e1 e2 -> compileExpr e1 ++ compileExpr e2 ++ [Instruction $ CONS]
+    IPair e1 e2 -> compileExpr fnname e1 ++ compileExpr fnname e2 ++ [Instruction $ CONS]
     IOperator1 Not e -> undefined -- There shouldn't be any booleans left at this point
-    IOperator1 Fst e -> compileExpr e ++ [Instruction $ CAR]
-    IOperator1 Snd e -> compileExpr e ++ [Instruction $ CDR]
-    IOperator1 Break e -> compileExpr e ++ [Instruction $ BRK]
+    IOperator1 Fst e -> compileExpr fnname e ++ [Instruction $ CAR]
+    IOperator1 Snd e -> compileExpr fnname e ++ [Instruction $ CDR]
+    IOperator1 Break e -> compileExpr fnname e ++ [Instruction $ BRK]
     IOperator2 op e1 e2 ->
       case op of
         Plus -> stack2Op ADD
@@ -155,30 +155,30 @@ compileExpr e =
         And -> undefined -- There shouldn't be any booleans left at this point
         Or -> undefined -- There shouldn't be any booleans left at this point
       where
-        stack2Op insn = compileExpr e1 ++ compileExpr e2 ++ [Instruction $ insn]
-        stack2OpRev insn = compileExpr e2 ++ compileExpr e1 ++ [Instruction $ insn]
-    ITrace e1 e2 -> compileExpr e1 ++ [Instruction $ DBUG] ++ compileExpr e2
+        stack2Op insn = compileExpr fnname e1 ++ compileExpr fnname e2 ++ [Instruction $ insn]
+        stack2OpRev insn = compileExpr fnname e2 ++ compileExpr fnname e1 ++ [Instruction $ insn]
+    ITrace e1 e2 -> compileExpr fnname e1 ++ [Instruction $ DBUG] ++ compileExpr fnname e2
     IIf e1 e2 e3 ->
       let lt = "true" in -- XXX allocate fresh labels
       let lf = "false" in
       let le = "end" in
-      compileExpr e1 ++ [Instruction $ SEL (RefAddr lt) (RefAddr lf)] ++
+      compileExpr fnname e1 ++ [Instruction $ SEL (RefAddr lt) (RefAddr lf)] ++
         [Instruction $ LDC 0, Instruction $ TSEL (RefAddr le) (RefAddr le)] ++
-        [Label lt] ++ compileExpr e2 ++ [Instruction $ JOIN] ++
-        [Label lf] ++ compileExpr e3 ++ [Instruction $ JOIN] ++
+        [Label lt] ++ compileExpr fnname e2 ++ [Instruction $ JOIN] ++
+        [Label lf] ++ compileExpr fnname e3 ++ [Instruction $ JOIN] ++
         [Label le]
     IFn label ->
-      let lf = "fn" ++ show label in
+      let lf = fnname ++ "_fn" ++ show label in
       [Instruction $ LDF (RefAddr lf)]
-    IApp e es -> concat (map compileExpr es) ++ compileExpr e ++ [Instruction $ AP (length es)]
+    IApp e es -> concat (map (compileExpr fnname) es) ++ compileExpr fnname e ++ [Instruction $ AP (length es)]
 
-compileFunctionBody :: String -> IExpr -> ProgramWithLabels
-compileFunctionBody label ie = [Label $ label] ++ compileExpr ie ++ [Instruction $ RTN]
+compileFunctionBody :: String -> String -> IExpr -> ProgramWithLabels
+compileFunctionBody fnname label ie = [Label $ label] ++ compileExpr fnname ie ++ [Instruction $ RTN]
 
 compileFunDecl :: [[Identifier]] -> Identifier -> Expr -> ProgramWithLabels
 compileFunDecl bindings id e =
   let (ie, labeledIes) = (flip extractFuncs [] . flip toDeBruin bindings . elimBoolsExpr) e in
-  compileFunctionBody id ie ++ concat (map (\(label, ie) -> compileFunctionBody (id ++ "_fn" ++ show label) ie) labeledIes)
+  compileFunctionBody id id ie ++ concat (map (\(label, ie) -> compileFunctionBody id (id ++ "_fn" ++ show label) ie) labeledIes)
 
 compileJml :: JmlProgram -> ProgramWithLabels
 compileJml (ds, MainDecl mainPats e) = [Instruction $ DUM (length recFuncs)] ++

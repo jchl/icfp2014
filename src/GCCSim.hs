@@ -30,7 +30,7 @@ data Env = Env [Value] |
            Dummy
            deriving Show
 
-type CpuState = (Addr, [Value], [Value], EnvPtr, Maybe [Value])
+type CpuState = (Addr, [Value], [Value], EnvPtr, Maybe (Maybe [Value]))
 
 liftOp1 :: (Value -> Value) -> CpuState -> Maybe CpuState
 liftOp1 op (c, x:s, d, e, ed) = Just (c + 1, op x : s, d, e, ed)
@@ -41,9 +41,9 @@ liftOp2 op (c, y:x:s, d, e, ed) = Just (c + 1, op x y : s, d, e, ed)
 intop :: (Int32 -> Int32 -> Int32) -> (Value -> Value -> Value)
 intop op (VInt x) (VInt y) = VInt (op x y)
 
-loadEnv :: Env -> Maybe [Value] -> Int -> Value
+loadEnv :: Env -> Maybe (Maybe [Value]) -> Int -> Value
 loadEnv (Env vs) edummy i = vs !! i
-loadEnv Dummy (Just vs) i = vs !! i
+loadEnv Dummy (Just (Just vs)) i = vs !! i
 
 sim :: Instruction -> CpuState -> Maybe CpuState
 sim (LDC n) = \(c, s, d, e, ed) -> Just (c + 1, VInt n : s, d, e, ed)
@@ -68,8 +68,8 @@ sim (RTN) = doReturn
   where
     doReturn (c, s, (VRet c'):(VEnv e'):d, e, ed) = Just (c', s, d, e', ed)
     doReturn (c, s, [], e, ed) = Nothing -- XXX too general!
-sim (DUM n) = \(c, s, d, e, Nothing) -> Just (c + 1, s, d, Dummy:e, Just (replicate n undefined))
-sim (RAP n) = \(c, (VClosure f (Dummy:e')):s, d, Dummy:e, ed) -> Just (f, drop n s, (VRet (c + 1)):(VEnv e):d, Dummy:e', Just (reverse $ take n s))
+sim (DUM n) = \(c, s, d, e, Nothing) -> Just (c + 1, s, d, Dummy:e, Just Nothing)
+sim (RAP n) = \(c, (VClosure f (Dummy:e')):s, d, Dummy:e, Just Nothing) -> Just (f, drop n s, (VRet (c + 1)):(VEnv e):d, Dummy:e', Just $ Just (reverse $ take n s))
 sim (STOP) = \(c, s, d, e, ed) -> undefined
 sim (TSEL (AbsAddr a1) (AbsAddr a2)) = \(c, cond:s, d, e, ed) -> Just (if fromInt cond /= 0 then a1 else a2, s, d, e, ed)
 sim (TAP n) = \(c, s, d, e, ed) -> undefined
