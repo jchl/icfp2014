@@ -69,7 +69,13 @@ Exp : num                          { Number $1 }
     | if Exp then Exp else Exp     { If $2 $4 $6 }
     | fn Pats '=>' Exp             { Fn $2 $4 }
     | Exp Exps                     { App $1 $2 }
-    | let Pat '=' Exp in Exp end   { Let $2 $4 $6 }
+    | let LetPat '=' Exp in Exp end   { Let $2 $4 $6 }
+
+LetPat : id                                 { IdPat $1 }
+       | '(' id ',' IdsWithCommasPlus ')'   { TuplePat ($2 : $4) }
+
+IdsWithCommasPlus : id ',' IdsWithCommasPlus { $1 : $3 }
+                  | id                       { [$1] }
 
 Exps : Exp Exps                    { $1 : $2 }
      | Exp                         { [$1] }

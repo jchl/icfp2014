@@ -54,6 +54,10 @@ instance Show Op1 where
 
 type Pat = Identifier
 
+data LetPat = IdPat Identifier |
+              TuplePat [Identifier]
+              deriving Show
+
 data Expr = Number Int |
             Boolean Bool |
             Tuple [Expr] |
@@ -66,7 +70,7 @@ data Expr = Number Int |
             If Expr Expr Expr |
             Fn [Pat] Expr |
             App Expr [Expr] |
-            Let Pat Expr Expr
+            Let LetPat Expr Expr
 
 instance Show Expr where
   show (Number n) = show n
@@ -81,7 +85,7 @@ instance Show Expr where
   show (If e1 e2 e3) = "if (" ++ show e1 ++ ") then (" ++ show e2 ++ ") else (" ++ show e3 ++ ")"
   show (Fn pats e) = "fn " ++ intercalate " " pats ++ " => (" ++ show e ++ ")"
   show (App e es) = "(" ++ show e ++ ") " ++ intercalate " " (map (\e -> "(" ++ show e ++ ")") es)
-  show (Let pat e1 e2) = "let " ++ pat ++ " = " ++ show e1 ++ " in (" ++ show e2 ++ ")"
+  show (Let letpat e1 e2) = "let " ++ show letpat ++ " = " ++ show e1 ++ " in (" ++ show e2 ++ ")"
 
 type ConstDecl = (Identifier, Expr)
 

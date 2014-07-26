@@ -120,7 +120,8 @@ toDeBruin e bindings =
       let be1 = toDeBruin e1 bindings in
       let bes = map (flip toDeBruin bindings) es in
       BApp be1 bes
-    Let pat e1 e2 -> toDeBruin (App (Fn [pat] e2) [e1]) bindings
+    Let (IdPat id) e1 e2 -> toDeBruin (App (Fn [id] e2) [e1]) bindings
+    Let (TuplePat ids) e1 e2 -> toDeBruin (App (Fn ids e2) (splitTuple (length ids) e1)) bindings
   where
     lookupIdent :: [[Identifier]] -> Identifier -> (Int, Int)
     lookupIdent = lookupIdent' 0
@@ -132,6 +133,10 @@ toDeBruin e bindings =
               case elemIndex id b of
                 Nothing -> lookupIdent' (i + 1) bs id
                 Just j -> (i, j)
+
+    splitTuple n e = map (flip tupleNth e) [0..(n - 2)] ++ [tupleNth' (n - 1) e]
+    tupleNth n e = if n == 0 then Operator1 Fst e else tupleNth (n - 1) (Operator1 Snd e)
+    tupleNth' n e = if n == 0 then e else tupleNth' (n - 1) (Operator1 Snd e)
 
 data IExpr = INumber Int |
              IIdentifier Int Int |
