@@ -57,19 +57,23 @@ Pats : Pat Pats                    { $1 : $2 }
      |                             { [] }
 Pat : id                           { $1 }
 
-Exp : num                          { Number $1 }
-    | bool                         { Boolean $1 }
-    | '(' Exp ',' ExpsWithCommasPlus ')' { Tuple ($2 : $4) }
-    | '[' ExpsWithCommas ']'       { List $2 }
-    | id                           { Identifier (makeIdentifier $1) }
-    | '(' Exp ')'                  { $2 }
-    | op1 Exp                      { Operator1 (stringToOp1 $1) $2 }
-    | trace Exp in Exp end         { Trace $2 $4 }
-    | Exp op2 Exp                  { Operator2 (stringToOp2 $2) $1 $3 }
-    | if Exp then Exp else Exp     { If $2 $4 $6 }
+AtExp : num                                { Number $1 }
+      | bool                               { Boolean $1 }
+      | '(' Exp ',' ExpsWithCommasPlus ')' { Tuple ($2 : $4) }
+      | '[' ExpsWithCommas ']'             { List $2 }
+      | id                                 { Identifier (makeIdentifier $1) }
+      | '(' Exp ')'                        { $2 }
+      | let LetPat '=' Exp in Exp end      { Let $2 $4 $6 }
+      | trace Exp in Exp end               { Trace $2 $4 }
+
+OpExp : AtExp                             { $1 }
+      | op1 AtExp                         { Operator1 (stringToOp1 $1) $2 }
+      | AtExp op2 OpExp                   { Operator2 (stringToOp2 $2) $1 $3 }
+      | AtExp AtExps                      { App $1 $2 }
+
+Exp : OpExp                        { $1 }
     | fn Pats '=>' Exp             { Fn $2 $4 }
-    | Exp Exps                     { App $1 $2 }
-    | let LetPat '=' Exp in Exp end   { Let $2 $4 $6 }
+    | if Exp then Exp else Exp     { If $2 $4 $6 }
 
 LetPat : id                                 { IdPat $1 }
        | '(' id ',' IdsWithCommasPlus ')'   { TuplePat ($2 : $4) }
@@ -77,8 +81,8 @@ LetPat : id                                 { IdPat $1 }
 IdsWithCommasPlus : id ',' IdsWithCommasPlus { $1 : $3 }
                   | id                       { [$1] }
 
-Exps : Exp Exps                    { $1 : $2 }
-     | Exp                         { [$1] }
+AtExps : AtExp AtExps                  { $1 : $2 }
+       | AtExp                         { [$1] }
 
 ExpsWithCommas : Exp ',' ExpsWithCommas { $1 : $3 }
                | Exp                    { [$1] }
