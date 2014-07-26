@@ -20,6 +20,24 @@ Library
 -- -auto-all
 -- Ghc-options:       -Wall
 
+Executable jmlcc
+  Hs-source-dirs:    src
+  Main-is:           JMLCompilerMain.hs
+  Build-depends:     base, array, containers, text, bytestring, time, regex-posix
+  Other-modules:     JML, JMLTokens, GCC, GCCSim, Types, JMLCompiler
+  Ghc-options:       -O2 -rtsopts
+-- -prof -auto-all
+-- -threaded
+
+Executable gccsim
+  Hs-source-dirs:    src
+  Main-is:           GCCSimMain.hs
+  Build-depends:     base, array, containers, text, bytestring, time, regex-posix
+  Other-modules:     GCC, GCCSim
+  Ghc-options:       -O2 -rtsopts
+-- -prof -auto-all
+-- -threaded
+
 Source-repository head
   Type:              git
   Location:          https://github.com/jchl/icfp2014.git

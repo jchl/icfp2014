@@ -33,10 +33,10 @@ data Expr = Number Int |
             If Expr Expr Expr |
             Fn [Pat] Expr |
             App Expr [Expr] |
-            Let [Pat] Expr Expr
+            Let Pat Expr Expr
 
 data Declaration = FunDecl Identifier [Pat] Expr |
-                   ValDecl [Pat] Expr
+                   ValDecl Pat Expr
 
 type JmlProgram = [Declaration]
 

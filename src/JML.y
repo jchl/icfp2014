@@ -39,7 +39,7 @@ Declaration : FunDecl              { $1 }
             | ValDecl              { $1 }
 
 FunDecl : fun id Pats '=>' Exp     { FunDecl $2 $3 $5 }
-ValDecl : val Pats '=' Exp         { ValDecl $2 $4 }
+ValDecl : val Pat '=' Exp          { ValDecl $2 $4 }
 
 Pats : Pat Pats                    { $1 : $2 }
      | Pat                         { [$1] }
@@ -55,7 +55,7 @@ Exp : num                          { Number $1 }
     | if Exp then Exp else Exp     { If $2 $4 $6 }
     | fn Pats '=>' Exp             { Fn $2 $4 }
     | Exp Exps                     { App $1 $2 }
-    | let Pats '=' Exp in Exp end  { Let $2 $4 $6 }
+    | let Pat '=' Exp in Exp end   { Let $2 $4 $6 }
 
 Exps : Exp Exps                    { $1 : $2 }
      | Exp                         { [$1] }
