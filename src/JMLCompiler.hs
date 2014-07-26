@@ -57,14 +57,14 @@ elimBoolsExpr e = case e of
   Number n -> Number n
   Boolean True -> Number 1
   Boolean False -> Number 0
-  Tuple _ -> undefined -- There shouldn't be any tuples left at this point
-  List _ -> undefined -- There shouldn't be any lists left at this point
+  Tuple _ -> error "unexpected tuple"
+  List _ -> error "unexpected list"
   Identifier id -> Identifier id
   Pair e1 e2 -> Pair (elimBoolsExpr e1) (elimBoolsExpr e2)
   Operator1 Not e -> Operator2 Minus (Number 1) (elimBoolsExpr e)
   Operator1 op e -> Operator1 op (elimBoolsExpr e)
-  Operator2 And e1 e2 -> If (elimBoolsExpr e1) (elimBoolsExpr e2) (Boolean False)
-  Operator2 Or e1 e2 -> If (elimBoolsExpr e1) (Boolean True) (elimBoolsExpr e2)
+  Operator2 And e1 e2 -> If (elimBoolsExpr e1) (elimBoolsExpr e2) (Number 0)
+  Operator2 Or e1 e2 -> If (elimBoolsExpr e1) (Number 1) (elimBoolsExpr e2)
   Operator2 NotEquals e1 e2 -> elimBoolsExpr (Operator1 Not (Operator2 Equals e1 e2))
   Operator2 op e1 e2 -> Operator2 op (elimBoolsExpr e1) (elimBoolsExpr e2)
   Trace e1 e2 -> Trace (elimBoolsExpr e1) (elimBoolsExpr e2)
@@ -87,12 +87,12 @@ toDeBruin :: Expr -> [[Identifier]] -> BExpr
 toDeBruin e bindings =
   case e of
     Number n -> BNumber n
-    Boolean b -> undefined -- There shouldn't be any booleans left at this point
+    Boolean b -> error "unexpected boolean"
     Identifier id ->
       let (i, j) = lookupIdent bindings id in
       BIdentifier i j
-    Tuple _ -> undefined -- There shouldn't be any tuples left at this point
-    List _ -> undefined -- There shouldn't be any lists left at this point
+    Tuple _ -> error "unexpected tuple"
+    List _ -> error "unexpected list"
     Pair e1 e2 ->
       let be1 = toDeBruin e1 bindings in
       let be2 = toDeBruin e2 bindings in
@@ -128,7 +128,7 @@ toDeBruin e bindings =
       where
         lookupIdent' i bindings id =
           case bindings of
-            [] -> undefined
+            [] -> error $  "unbound identifier: " ++ id
             (b:bs) ->
               case elemIndex id b of
                 Nothing -> lookupIdent' (i + 1) bs id
@@ -187,31 +187,31 @@ extractFuncs e ctx =
     allocLabel :: [(Int, a)] -> Int
     allocLabel ctx = maximum (0 : map fst ctx) + 1
 
-compileExpr :: String -> IExpr -> State Int ProgramWithLabels
-compileExpr fnname e =
+compileExpr :: String -> String -> IExpr -> State Int ProgramWithLabels
+compileExpr fnname innerFnname e =
   case e of
     INumber n -> return [Instruction $ LDC n]
     IIdentifier i j -> return [Instruction $ LD i j]
     IPair e1 e2 ->
-      do p1 <- compileExpr fnname e1
-         p2 <- compileExpr fnname e2
+      do p1 <- compileExpr fnname innerFnname e1
+         p2 <- compileExpr fnname innerFnname e2
          return $ p1 ++ p2 ++ [Instruction $ CONS]
-    IOperator1 Not e -> undefined -- There shouldn't be any booleans left at this point
+    IOperator1 Not e -> error "unexpected boolean (not)"
     IOperator1 Fst e ->
-      do p <- compileExpr fnname e
+      do p <- compileExpr fnname innerFnname e
          return $ p ++ [Instruction $ CAR]
     IOperator1 Snd e ->
-      do p <- compileExpr fnname e
+      do p <- compileExpr fnname innerFnname e
          return $ p ++ [Instruction $ CDR]
     IOperator1 Atom e ->
-      do p <- compileExpr fnname e
+      do p <- compileExpr fnname innerFnname e
          return $ p ++ [Instruction $ ATOM]
     IOperator1 Break e ->
-      do p <- compileExpr fnname e
+      do p <- compileExpr fnname innerFnname e
          return $ p ++ [Instruction $ BRK]
-    IOperator1 Null e -> undefined -- There shouldn't be any lists left at this point
-    IOperator1 Head e -> undefined -- There shouldn't be any lists left at this point
-    IOperator1 Tail e -> undefined -- There shouldn't be any lists left at this point
+    IOperator1 Null e -> error "unexpected boolean (null)"
+    IOperator1 Head e -> error "unexpected boolean (head)"
+    IOperator1 Tail e -> error "unexpected boolean (tail)"
     IOperator2 op e1 e2 ->
       case op of
         Plus -> stack2Op ADD
@@ -219,36 +219,36 @@ compileExpr fnname e =
         Times -> stack2Op MUL
         Divide -> stack2Op DIV
         Equals -> stack2Op CEQ
-        NotEquals -> undefined -- There shouldn't be any != left at this point
+        NotEquals -> error "unexpected boolean (!=)"
         LessThan -> stack2OpRev CGT
         GreaterThan -> stack2Op CGT
         LessThanOrEquals -> stack2OpRev CGTE
         GreaterThanOrEquals -> stack2Op CGTE
-        And -> undefined -- There shouldn't be any booleans left at this point
-        Or -> undefined -- There shouldn't be any booleans left at this point
-        ListCons -> undefined -- There shouldn't be any lists left at this point
+        And -> error "unexpected boolean (and)"
+        Or -> error "unexpected boolean (or)"
+        ListCons -> error "unexpected list (::)"
       where
         stack2Op insn =
-          do p1 <- compileExpr fnname e1
-             p2 <- compileExpr fnname e2
+          do p1 <- compileExpr fnname innerFnname e1
+             p2 <- compileExpr fnname innerFnname e2
              return $ p1 ++ p2 ++ [Instruction $ insn]
         stack2OpRev insn =
-          do p1 <- compileExpr fnname e2
-             p2 <- compileExpr fnname e1
+          do p1 <- compileExpr fnname innerFnname e2
+             p2 <- compileExpr fnname innerFnname e1
              return $ p1 ++ p2 ++ [Instruction $ insn]
     ITrace e1 e2 ->
-      do p1 <- compileExpr fnname e1
-         p2 <- compileExpr fnname e2
+      do p1 <- compileExpr fnname innerFnname e1
+         p2 <- compileExpr fnname innerFnname e2
          return $ p1 ++ [Instruction $ DBUG] ++ p2
     IIf e1 e2 e3 ->
       do n <- get
-         let lt = fnname ++ "_true" ++ show n
-         let lf = fnname ++ "_false" ++ show n
-         let le = fnname ++ "_end" ++ show n
+         let lt = innerFnname ++ "_true" ++ show n
+         let lf = innerFnname ++ "_false" ++ show n
+         let le = innerFnname ++ "_end" ++ show n
          put (n + 1)
-         p1 <- compileExpr fnname e1
-         p2 <- compileExpr fnname e2
-         p3 <- compileExpr fnname e3
+         p1 <- compileExpr fnname innerFnname e1
+         p2 <- compileExpr fnname innerFnname e2
+         p3 <- compileExpr fnname innerFnname e3
          return $ p1 ++ [Instruction $ SEL (RefAddr lt) (RefAddr lf)] ++
            [Instruction $ LDC 0, Instruction $ TSEL (RefAddr le) (RefAddr le)] ++
            [Label lt] ++ p2 ++ [Instruction $ JOIN] ++
@@ -258,14 +258,17 @@ compileExpr fnname e =
       let lf = fnname ++ "_fn" ++ show label in
       return [Instruction $ LDF (RefAddr lf)]
     IApp e es ->
-      do ps <- liftM concat $ mapM (compileExpr fnname) es
-         p <- compileExpr fnname e
+      do ps <- liftM concat $ mapM (compileExpr fnname innerFnname) es
+         p <- compileExpr fnname innerFnname e
          return $ ps ++ p ++ [Instruction $ AP (length es)]
 
 compileFunctionBody :: String -> String -> IExpr -> ProgramWithLabels
 compileFunctionBody fnname label ie =
-  let (p, _) = runState (compileExpr fnname ie) 0 in
-  [Label $ label] ++ p ++ [Instruction $ RTN]
+  let (p, _) = runState (compileExpr fnname label ie) 0 in
+  let n = 0 in -- XXX
+  [Label $ label] ++
+--  [Instruction $ LDC n, Instruction $ DBUG] ++ -- XXX
+  p ++ [Instruction $ RTN]
 
 compileFunDecl :: [ConstDecl] -> [[Identifier]] -> Identifier -> Expr -> ProgramWithLabels
 compileFunDecl consts bindings id e =
