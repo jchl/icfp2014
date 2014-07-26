@@ -56,7 +56,7 @@ sim (DIV) = liftOp2 $ intop quot -- XXX check division
 sim (CEQ) = liftOp2 $ intop (\x y -> if x == y then 1 else 0)
 sim (CGT) = liftOp2 $ intop (\x y -> if x > y then 1 else 0)
 sim (CGTE) = liftOp2 $ intop (\x y -> if x >= y then 1 else 0)
-sim (ATOM) = liftOp1 (\x -> if isInt x then VInt 1 else VInt 2)
+sim (ATOM) = liftOp1 (\x -> if isInt x then VInt 1 else VInt 0)
 sim (CONS) = liftOp2 (\x y -> VCons x y)
 sim (CAR) = liftOp1 (\(VCons x _) -> x)
 sim (CDR) = liftOp1 (\(VCons _ y) -> y)

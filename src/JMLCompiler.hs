@@ -12,16 +12,14 @@ listToPair (e:es) = Pair e (listToPair es)
 desugarLists :: Expr -> Expr
 desugarLists e = case e of
   Number n -> Number n
-  Boolean True -> Number 1
-  Boolean False -> Number 0
+  Boolean b -> Boolean b
   List es -> listToPair es
   Identifier id -> Identifier id
   Pair e1 e2 -> Pair (desugarLists e1) (desugarLists e2)
-  Operator1 Not e -> Operator2 Minus (Number 1) (desugarLists e)
-  Operator1 op e -> Operator1 op (desugarLists e)
-  Operator2 And e1 e2 -> If (desugarLists e1) (desugarLists e2) (Boolean False)
-  Operator2 Or e1 e2 -> If (desugarLists e1) (Boolean True) (desugarLists e2)
-  Operator2 NotEquals e1 e2 -> desugarLists (Operator1 Not (Operator2 Equals e1 e2))
+  Operator1 Null e -> Operator1 Atom (desugarLists e)
+  Operator1 Head e -> Operator1 Fst (desugarLists e)
+  Operator1 Tail e -> Operator1 Snd (desugarLists e)
+  Operator2 ListCons e1 e2 -> Pair (desugarLists e1) (desugarLists e2)
   Operator2 op e1 e2 -> Operator2 op (desugarLists e1) (desugarLists e2)
   Trace e1 e2 -> Trace (desugarLists e1) (desugarLists e2)
   If e1 e2 e3 -> If (desugarLists e1) (desugarLists e2) (desugarLists e3)
@@ -172,9 +170,15 @@ compileExpr fnname e =
     IOperator1 Snd e ->
       do p <- compileExpr fnname e
          return $ p ++ [Instruction $ CDR]
+    IOperator1 Atom e ->
+      do p <- compileExpr fnname e
+         return $ p ++ [Instruction $ ATOM]
     IOperator1 Break e ->
       do p <- compileExpr fnname e
          return $ p ++ [Instruction $ BRK]
+    IOperator1 Null e -> undefined -- There shouldn't be any lists left at this point
+    IOperator1 Head e -> undefined -- There shouldn't be any lists left at this point
+    IOperator1 Tail e -> undefined -- There shouldn't be any lists left at this point
     IOperator2 op e1 e2 ->
       case op of
         Plus -> stack2Op ADD
@@ -189,6 +193,7 @@ compileExpr fnname e =
         GreaterThanOrEquals -> stack2Op CGTE
         And -> undefined -- There shouldn't be any booleans left at this point
         Or -> undefined -- There shouldn't be any booleans left at this point
+        ListCons -> undefined -- There shouldn't be any lists left at this point
       where
         stack2Op insn =
           do p1 <- compileExpr fnname e1

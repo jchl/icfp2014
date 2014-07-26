@@ -15,7 +15,8 @@ data Op2 = Plus |
            LessThanOrEquals |
            GreaterThanOrEquals |
            And |
-           Or
+           Or |
+           ListCons
 
 instance Show Op2 where
   show Plus = "+"
@@ -30,17 +31,26 @@ instance Show Op2 where
   show GreaterThanOrEquals = ">="
   show And = "and"
   show Or = "or"
+  show ListCons = "::"
 
 data Op1 = Not |
            Fst |
            Snd |
-           Break
+           Atom |
+           Break |
+           Null |
+           Head |
+           Tail
 
 instance Show Op1 where
   show Not = "not"
   show Fst = "fst"
   show Snd = "snd"
+  show Atom = "atom"
   show Break = "break"
+  show Null = "null"
+  show Head = "head"
+  show Tail = "tail"
 
 type Pat = Identifier
 
@@ -92,13 +102,17 @@ ops2Map = [
   ( "<=", LessThanOrEquals ),
   ( ">=", GreaterThanOrEquals ),
   ( "and", And ),
-  ( "or", Or ) ]
+  ( "or", Or ),
+  ( "::", ListCons ) ]
 
 ops1Map = [
   ( "not", Not ),
   ( "fst", Fst ),
   ( "snd", Snd ),
-  ( "break", Break ) ]
+  ( "break", Break ),
+  ( "null", Null ),
+  ( "head", Head ),
+  ( "tail", Tail ) ]
 
 stringToOp1 :: String -> Op1
 stringToOp1 s = fromJust $ lookup s ops1Map

@@ -9,6 +9,9 @@ module JMLTokens (Token(..), jmlLex) where
    |snd
    |not
    |break
+   |null
+   |head
+   |tail
 
 @op2 =
    and
