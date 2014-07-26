@@ -9,6 +9,24 @@ listToPair :: [Expr] -> Expr
 listToPair [] = Number 0
 listToPair (e:es) = Pair e (listToPair es)
 
+substConsts :: [ConstDecl] -> Expr -> Expr
+substConsts consts e = case e of
+  Number n -> Number n
+  Boolean b -> Boolean b
+  List es -> List (map (substConsts consts) es)
+  Identifier id ->
+    case lookup id consts of
+      Nothing -> Identifier id
+      Just e -> e
+  Pair e1 e2 -> Pair (substConsts consts e1) (substConsts consts e2)
+  Operator1 op e -> Operator1 op (substConsts consts e)
+  Operator2 op e1 e2 -> Operator2 op (substConsts consts e1) (substConsts consts e2)
+  Trace e1 e2 -> Trace (substConsts consts e1) (substConsts consts e2)
+  If e1 e2 e3 -> If (substConsts consts e1) (substConsts consts e2) (substConsts consts e3)
+  Fn pats e -> Fn pats (substConsts consts e)
+  App e es -> App (substConsts consts e) (map (substConsts consts) es)
+  Let pat e1 e2 -> Let pat (substConsts consts e1) (substConsts consts e2)
+
 desugarLists :: Expr -> Expr
 desugarLists e = case e of
   Number n -> Number n
@@ -19,6 +37,7 @@ desugarLists e = case e of
   Operator1 Null e -> Operator1 Atom (desugarLists e)
   Operator1 Head e -> Operator1 Fst (desugarLists e)
   Operator1 Tail e -> Operator1 Snd (desugarLists e)
+  Operator1 op e -> Operator1 op (desugarLists e)
   Operator2 ListCons e1 e2 -> Pair (desugarLists e1) (desugarLists e2)
   Operator2 op e1 e2 -> Operator2 op (desugarLists e1) (desugarLists e2)
   Trace e1 e2 -> Trace (desugarLists e1) (desugarLists e2)
@@ -234,19 +253,19 @@ compileFunctionBody fnname label ie =
   let (p, _) = runState (compileExpr fnname ie) 0 in
   [Label $ label] ++ p ++ [Instruction $ RTN]
 
-compileFunDecl :: [[Identifier]] -> Identifier -> Expr -> ProgramWithLabels
-compileFunDecl bindings id e =
-  let (ie, labeledIes) = (flip extractFuncs [] . flip toDeBruin bindings . elimBoolsExpr . desugarLists) e in
+compileFunDecl :: [ConstDecl] -> [[Identifier]] -> Identifier -> Expr -> ProgramWithLabels
+compileFunDecl consts bindings id e =
+  let (ie, labeledIes) = (flip extractFuncs [] . flip toDeBruin bindings . elimBoolsExpr . desugarLists . substConsts consts) e in
   compileFunctionBody id id ie ++ concat (map (\(label, ie) -> compileFunctionBody id (id ++ "_fn" ++ show label) ie) labeledIes)
 
 compileJml :: JmlProgram -> ProgramWithLabels
-compileJml (ds, MainDecl mainPats e) = [Instruction $ DUM (length recFuncs)] ++
-                                       map (\lf -> Instruction $ LDF (RefAddr lf)) recFuncs ++
-                                       [Instruction $ LDF (RefAddr "main"),
-                                        Instruction $ RAP (length recFuncs),
-                                        Instruction $ RTN] ++
-                                       compileFunDecl [recFuncs, mainPats] "main" e ++
-                                       concat (map compileDecl ds)
+compileJml (consts, ds, MainDecl mainPats e) = [Instruction $ DUM (length recFuncs)] ++
+                                               map (\lf -> Instruction $ LDF (RefAddr lf)) recFuncs ++
+                                               [Instruction $ LDF (RefAddr "main"),
+                                                Instruction $ RAP (length recFuncs),
+                                                Instruction $ RTN] ++
+                                               compileFunDecl consts [recFuncs, mainPats] "main" e ++
+                                               concat (map compileDecl ds)
   where
     recFuncs = gatherRecFuncs [] ds
 
@@ -254,4 +273,4 @@ compileJml (ds, MainDecl mainPats e) = [Instruction $ DUM (length recFuncs)] ++
     gatherRecFuncs fs ((FunDecl id pats e):ds') = gatherRecFuncs (id:fs) ds'
     gatherRecFuncs fs (_:ds') = gatherRecFuncs fs ds'
 
-    compileDecl (FunDecl id pats e) = compileFunDecl [pats, recFuncs, mainPats] id e
+    compileDecl (FunDecl id pats e) = compileFunDecl consts [pats, recFuncs, mainPats] id e

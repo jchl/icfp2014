@@ -81,6 +81,8 @@ instance Show Expr where
   show (App e es) = "(" ++ show e ++ ") " ++ intercalate " " (map (\e -> "(" ++ show e ++ ")") es)
   show (Let pat e1 e2) = "let " ++ pat ++ " = " ++ show e1 ++ " in (" ++ show e2 ++ ")"
 
+type ConstDecl = (Identifier, Expr)
+
 data Declaration = FunDecl Identifier [Pat] Expr |
                    ValDecl Pat Expr
                    deriving Show
@@ -88,7 +90,7 @@ data Declaration = FunDecl Identifier [Pat] Expr |
 data MainDecl = MainDecl [Pat] Expr
                 deriving Show
 
-type JmlProgram = ([Declaration], MainDecl)
+type JmlProgram = ([ConstDecl], [Declaration], MainDecl)
 
 ops2Map = [
   ( "+", Plus ),

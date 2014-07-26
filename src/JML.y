@@ -20,6 +20,7 @@ import Types
   fn      { TokenFn }
   fun     { TokenFun }
   val     { TokenVal }
+  const   { TokenConst }
   main    { TokenMain }
   if      { TokenIf }
   then    { TokenThen }
@@ -36,7 +37,11 @@ import Types
 
 %%
 
-Program : Declarations MainDecl     { ($1, $2) }
+Program : ConstDecls Declarations MainDecl     { ($1, $2, $3) }
+
+ConstDecl : const id '=' Exp       { ($2, $4) }
+ConstDecls : ConstDecl ConstDecls  { $1 : $2 }
+           |                       { [] }
 
 Declarations : Declaration Declarations { $1 : $2 }
              |                          { [] }
