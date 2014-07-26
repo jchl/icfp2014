@@ -53,39 +53,39 @@ fun eqLoc loc1 loc2 =
 fun stepper state world =
   let (map, myStatus, ghostsStatus, fruitTime) = world in
   let (myVitality, myLocation, myDirection, lives, score) = myStatus in
-  trace (1, myLocation, getcell map myLocation) in
-  let (oldMove, followMode, startLocation) = state in
+;  trace (1, myLocation, getcell map myLocation) in
+  let (oldMove, followMode, startLocation, nMoves) = state in
   let followMode = if eqLoc startLocation myLocation then 1 - followMode else followMode in
-  trace followMode in
+;  trace followMode in
   let move =
     if followMode == followRight then
       if getcell map (offset myLocation (turnright oldMove)) != wall then turnright oldMove
       else if getcell map (offset myLocation oldMove) != wall then oldMove
       else if getcell map (offset myLocation (turnleft oldMove)) != wall then turnleft oldMove
-      else {opposite} oldMove
+      else opposite oldMove
    else
       if getcell map (offset myLocation (turnleft oldMove)) != wall then turnleft oldMove
       else if getcell map (offset myLocation oldMove) != wall then oldMove
       else if getcell map (offset myLocation (turnright oldMove)) != wall then turnright oldMove
-      else {opposite} oldMove in
-  let state = (move, followMode, startLocation) in
+      else opposite oldMove in
+  let state = (move, followMode, startLocation, nMoves + 1) in
     trace (state, move) in (state, move) end
   end
   end
+;  end
   end
   end
-  end
-  end
+;  end
   end
   end
 
 main world ghosts =
   let (map, myStatus, ghostsStatus, fruitTime) = world in
   let (myVitality, myLocation, myDirection, lives, score) = myStatus in
-  trace (0, myLocation, getcell map myLocation) in
-  let state = (down, followRight, myLocation) in
+;  trace (0, myLocation, getcell map myLocation) in
+  let state = (down, followRight, myLocation, 0) in
     (state, stepper)
   end
-  end
+;  end
   end
   end
