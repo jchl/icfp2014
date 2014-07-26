@@ -15,12 +15,21 @@ const fruit = 4
 const lambda_start = 5
 const ghost_start = 6
 
+fun opposite move =
+  let move' = move + 2 in
+    if move' > 3 then move' - 4 else move'
+  end
+
+fun length xs = if null xs then 0 else 1 + (length (tail xs))
+
+fun nth n xs = if n == 0 then head xs else (nth (n - 1) (tail xs))
+
 fun stepper state world =
   let (map, myStatus, ghostsStatus, fruitTime) = world in
   let (myVitality, myLocation, myDirection, lives, score) = myStatus in
   let (myX, myY) = myLocation in
-  let move = left in
-  let state = 0 in
+  let move = opposite state in
+  let state = move in
     (state, move)
   end
   end
@@ -29,6 +38,6 @@ fun stepper state world =
   end
 
 main world ghosts =
-  let state = 0 in
+  let state = right in
     (state, stepper)
   end
