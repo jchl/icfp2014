@@ -26,17 +26,24 @@ fun turnleft move = mod4 (move - 1)
 
 fun length xs = if null xs then 0 else 1 + length (tail xs)
 
+fun map f xs = if null xs then [] else f (head xs) :: map f (tail xs)
+
+fun fold f y xs = if null xs then y else fold f (f y (head xs)) (tail xs)
+
+fun all xs = fold (fn a b => a and b) true xs
+fun any xs = fold (fn a b => a or b) false xs
+
 fun nth n xs = if n == 0 then head xs else nth (n - 1) (tail xs)
 
 fun mod a b = a - ((a / b) * b) ; Not sure if this is right (especially with negative numbers)...
 
 fun randbool randsrc = mod (head randsrc) 2 == 0
 
-fun getcell' map x y = nth x (nth y map)
+fun getcell' maze x y = nth x (nth y maze)
 
-fun getcell map loc =
+fun getcell maze loc =
   let (x, y) = loc in
-    nth x (nth y map)
+    nth x (nth y maze)
   end
 
 fun offset loc dir =
@@ -50,22 +57,33 @@ fun offset loc dir =
 fun eqLoc loc1 loc2 =
   let (x1, y1) = loc1 in
   let (x2, y2) = loc2 in
-    x1 == x2 and y1 == y2
+    (x1 == x2) and (y1 == y2)
   end
   end
 
+fun okDir maze ghostLocs ghostNextLocs myVitality myLocation dir = ; Shouldn't avoid ghosts when in fright mode
+  let newLocation = offset myLocation dir in
+    (getcell maze newLocation != wall) and
+    (not (any (map (fn loc => trace (loc, newLocation) in eqLoc newLocation loc end) ghostLocs))) and
+    (not (any (map (fn loc => trace (loc, newLocation) in eqLoc newLocation loc end) ghostNextLocs)))
+  end
+
 fun stepper state world =
-  let (map, myStatus, ghostsStatus, fruitTime) = world in
+  let (maze, myStatus, ghostsStatus, fruitTime) = world in
   let (myVitality, myLocation, myDirection, lives, score) = myStatus in
-;  trace (1, myLocation, getcell map myLocation) in
+  let ghostLocs = map (fn ghostStatus => let (ghostVitality, ghostLocation, ghostDirection) = ghostStatus in ghostLocation end) ghostsStatus in
+  let ghostNextLocs = map (fn ghostStatus => let (ghostVitality, ghostLocation, ghostDirection) = ghostStatus in offset ghostLocation ghostDirection end) ghostsStatus in
+;  trace (1, myLocation, getcell maze myLocation) in
   let (oldMove, followMode, startLocation, nMoves, randsrc, randsrc_orig) = state in
   let randsrc = if length randsrc < 3 then randsrc_orig else randsrc in
-  let followMode = if eqLoc startLocation myLocation then 1 - followMode else followMode in
+;  let followMode = if eqLoc startLocation myLocation then 1 - followMode else followMode in
 ;  trace followMode in
+; Pick a desired move
   let move =
-    let fwdOk = getcell map (offset myLocation oldMove) != wall in
-    let rightOk = getcell map (offset myLocation (turnright oldMove)) != wall in
-    let leftOk = getcell map (offset myLocation (turnleft oldMove)) != wall in
+    let fwdOk = okDir maze ghostLocs ghostNextLocs myVitality myLocation oldMove in
+    let rightOk = okDir maze ghostLocs ghostNextLocs myVitality myLocation (turnright oldMove) in
+    let leftOk = okDir maze ghostLocs ghostNextLocs myVitality myLocation (turnleft oldMove) in
+    trace (fwdOk, rightOk, leftOk) in
     if not (rightOk or leftOk or fwdOk) then opposite oldMove
     else if fwdOk then
       if leftOk and (randbool randsrc) then turnleft oldMove
@@ -78,23 +96,26 @@ fun stepper state world =
       turnleft oldMove
     end
     end
+    end
     end in
   let state = (move, followMode, startLocation, nMoves + 1, tail randsrc, randsrc_orig) in
     trace (state, move) in (state, move) end
   end
   end
 ;  end
-  end
+;  end
   end
   end
 ;  end
   end
   end
+  end
+  end
 
 main world ghosts =
-  let (map, myStatus, ghostsStatus, fruitTime) = world in
+  let (maze, myStatus, ghostsStatus, fruitTime) = world in
   let (myVitality, myLocation, myDirection, lives, score) = myStatus in
-;  trace (0, myLocation, getcell map myLocation) in
+;  trace (0, myLocation, getcell maze myLocation) in
   let randsrc = [74382,2783,89234,234,892,23487,874,829043,7862,294,2094,29,2095,29083,2098,257,81,89,91,890453,234] in
   let state = (down, followRight, myLocation, 0, randsrc, randsrc) in
     (state, stepper)
