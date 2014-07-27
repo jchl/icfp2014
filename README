@@ -1,8 +1,14 @@
 Building
 ========
 
-Most of the code is written in Haskell.  (There is also a tiny bit of Python).  To build, run
-'cabal build'.
+Most of the code is written in Haskell.  (There is also a tiny bit of Python).  To build, run:
+
+    cabal build
+
+To generate the .ghc and .gcc files, run:
+
+    ./jmlcc ai/lambda.jml ai/lambda.gcc
+    python src/ghcasm.py < ai/ghost0.ghc.in > ai/ghost0.ghc
 
 
 JML
