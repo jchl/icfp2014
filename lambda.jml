@@ -15,9 +15,6 @@ const fruit = 4
 const lambda_start = 5
 const ghost_start = 6
 
-const followRight = 0
-const followLeft = 1
-
 fun mod4 move = if move > 3 then move - 4 else if move < 0 then move + 4 else move
 
 fun opposite move = mod4 (move + 2)
@@ -114,20 +111,20 @@ fun bfs' frontier visited getNbrs eq stop =
   if nullq frontier then visited
   else
     let (x, frontier) = dequeue frontier in
-    let (n, prev_) = lookupBy eq x visited in
-      if stop (x, n) then
+    let nPrev = lookupBy eq x visited in
+      if stop (x, (fst nPrev)) then
          visited
       else
         let nbrs = filter (fn y => not (memberBy eq y visited)) (getNbrs x) in
-        let (frontier, visited) = fold (fn frontierAndVisited y =>
+        let frontierVisited = fold (fn frontierAndVisited y =>
           let (frontier, visited) = frontierAndVisited in
           let frontier = enqueue y frontier in
-          let visited = (y, (n + 1, x)) :: visited in
+          let visited = (y, ((fst nPrev) + 1, x)) :: visited in
             (frontier, visited)
           end
           end
           end) (frontier, visited) nbrs in
-          bfs' frontier visited getNbrs eq stop
+          bfs' (fst frontierVisited) (snd frontierVisited) getNbrs eq stop
         end
         end
     end
@@ -141,7 +138,6 @@ fun dirScore maze ghostLocs ghostNextLocs myVitality myLocation oldMove dir =
     let isGhost =
        (any (map (fn loc => eqLoc newLocation loc) ghostLocs)) or
        (any (map (fn loc => eqLoc newLocation loc) ghostNextLocs)) in
-;    trace (newLocation, contents, isGhost) in
     let score =
       if (contents == wall) or
           ((myVitality < 300 {fudge factor!}) and isGhost) then 0
@@ -151,7 +147,6 @@ fun dirScore maze ghostLocs ghostNextLocs myVitality myLocation oldMove dir =
       else 2 in
       (score, dir)
     end
-;    end
     end
     end
     end
@@ -199,17 +194,15 @@ fun deltafold f xs = if null (tail xs) then [] else (f (head xs) (head (tail xs)
 fun findDirs goodCell bfsResults myLoc =
   let p = rev (path goodCell bfsResults myLoc) in
   let deltas = deltafold delta p in
-;  trace deltas in
     deltas
-;  end
   end
   end
 
 fun path targetLocT bfsResults sourceLoc =
   if eqLoc (fst targetLocT) sourceLoc then [fst targetLocT]
   else
-    let (n, prevT) = lookupBy (fn x y => eqLoc (fst x) (fst y)) targetLocT bfsResults in
-      (fst targetLocT) :: (path prevT bfsResults sourceLoc)
+    let nPrevT = lookupBy (fn x y => eqLoc (fst x) (fst y)) targetLocT bfsResults in
+      (fst targetLocT) :: (path (snd nPrevT) bfsResults sourceLoc)
     end
 
 fun possibleNextLocs maze ghostStatus =
@@ -224,90 +217,79 @@ fun stepper state world =
   let (myVitality, myLocation, myDirection, lives, score) = myStatus in
   let ghostLocs = map (fn ghostStatus => let (ghostVitality, ghostLocation, ghostDirection) = ghostStatus in ghostLocation end) ghostsStatus in
   let ghostNextLocs = concat (map (fn ghostStatus => possibleNextLocs maze ghostStatus) ghostsStatus) in
-;  trace (1, myLocation, getcell maze myLocation) in
-  let (nMoves, oldMove, cachedMoves, followMode, movesSinceLike, startLocation, randsrc, randsrc_orig) = state in
-  trace (nMoves, oldMove, followMode, movesSinceLike) in
+  trace ghostNextLocs in
+  let (nMoves, oldMove, cachedMoves, movesSinceLike, startLocation, randsrc, randsrc_orig) = state in
+  trace (nMoves, oldMove, cachedMoves, movesSinceLike) in
   let randsrc = if null randsrc then randsrc_orig else randsrc in
-;  let followMode = if eqLoc startLocation myLocation then 1 - followMode else followMode in
-;  trace followMode in
 ; Pick a desired move
-  let (move, cachedMoves, like) =
+  let moveCachedMovesLike =
     let upScore = dirScore maze ghostLocs ghostNextLocs myVitality myLocation oldMove up in
     let rightScore = dirScore maze ghostLocs ghostNextLocs myVitality myLocation oldMove right in
     let downScore = dirScore maze ghostLocs ghostNextLocs myVitality myLocation oldMove down in
     let leftScore = dirScore maze ghostLocs ghostNextLocs myVitality myLocation oldMove left in
     let scores = [upScore, rightScore, downScore, leftScore] in ; can index into this list by direction
-;    trace scores in
+    trace scores in
     let maxscore = maximum (map (fn p => fst p) scores) in
     let bestdirs = map (fn p => snd p) (filter (fn s => (fst s) == maxscore) scores) in
-    trace (maxscore, maxscore <= 2, maxscore > 2) in
+    let randomdir = randomchoice randsrc bestdirs in
       if (maxscore <= 2) and (not (null cachedMoves)) then
         if (fst (nth (head cachedMoves) scores)) == 0 then
-          (randomchoice randsrc bestdirs, [], false)
+          (randomdir, [], false)
         else
           (head cachedMoves, tail cachedMoves, false)
       else if (maxscore <= 2) and (movesSinceLike > 5) then
         let bfsResults = bfs (myLocation, getcell maze myLocation) (fn x => let (loc, t) = x in getNbrs loc maze end) (fn x y => eqLoc (fst x) (fst y)) (fn x => ((snd x) >= 10) or ((snd (fst x)) == pill) or ((snd (fst x)) == power)) in
-;        trace bfsResults in
         let bestCells = findBestCells (findGoodCells bfsResults) in
           if null bestCells then
-            (randomchoice randsrc bestdirs, [], false)
+            (randomdir, [], false)
           else
             let optimalDirs = findDirs (let (x, stuff) = head bestCells in x end) bfsResults myLocation in
               if (fst (nth (head optimalDirs) scores)) == 0 then
-                (randomchoice randsrc bestdirs, [], false)
+                (randomdir, [], false)
               else
                 (head optimalDirs, tail optimalDirs, false)
             end
         end
-;        end
         end
       else
-        (randomchoice randsrc bestdirs, [], maxscore > 2)
+        (randomdir, [], maxscore > 2)
     end
     end
     end
-;    end
+    end
     end
     end
     end
     end
     end in
-  trace (move, like) in
+  let (move, cachedMoves, like) = moveCachedMovesLike in
   let nMoves = nMoves + 1 in
   let movesSinceLike = if like then 0 else movesSinceLike + 1 in
-  let state = (nMoves, move, cachedMoves, followMode, movesSinceLike, startLocation, tail randsrc, randsrc_orig) in
-    trace (nMoves, move, cachedMoves, followMode, movesSinceLike) in (state, move) end
+  let state = (nMoves, move, cachedMoves, movesSinceLike, startLocation, tail randsrc, randsrc_orig) in
+  trace (nMoves, move, cachedMoves, movesSinceLike) in
+    (state, move)
   end
   end
   end
   end
   end
-;  end
-;  end
   end
   end
   end
-;  end
+  end
+  end
   end
   end
   end
   end
 
 main world ghosts =
-;  trace (66, 1 > 0, 0 > 1, 1 < 0, 0 < 1, 1 >= 0, 0 >= 1, 1 <= 0, 0 <= 1, 1 >= 1, 1 <= 1) in
-; should be (66, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1) -- correct
-;  trace bfs 17 (fn n => if n == 0 then [1] else if n == 20 then [19] else [n - 1, n + 1]) (fn a b => a == b) (fn x => false) in
   let (maze, myStatus, ghostsStatus, fruitTime) = world in
   let (myVitality, myLocation, myDirection, lives, score) = myStatus in
-;  trace (0, myLocation, getcell maze myLocation) in
   let randsrc = [74382,2783,89234,234,892,23487,874,829043,7862,294,2094,29,2095,29083,2098,257,81,89,91,890453,234] in
-  let state = (0, down, [], followRight, 0, myLocation, randsrc, randsrc) in
+  let state = (0, down, [], 0, myLocation, randsrc, randsrc) in
     (state, stepper)
   end
-;  end
   end
   end
   end
-;  end
-;  end
