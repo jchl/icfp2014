@@ -15,27 +15,24 @@ const fruit = 4
 const lambda_start = 5
 const ghost_start = 6
 
-fun mod4 move = if move > 3 then move - 4 else if move < 0 then move + 4 else move
+; A source of pseudo-random numbers
 
-fun opposite move = mod4 (move + 2)
-fun turnright move = mod4 (move + 1)
-fun turnleft move = mod4 (move - 1)
+const init_randsrc = [2783,89234,234,892,23487,874,829043,7862,294,2094,29,2095,29083,2098,257,81,89,91,890453,234]
+
+; List functions
 
 fun length xs = if null xs then 0 else 1 + length (tail xs)
 
+fun nth n xs = if n == 0 then head xs else nth (n - 1) (tail xs)
+
 fun last xs = if null (tail xs) then head xs else last (tail xs)
-
-fun lookup x xs = if x == (fst (head xs)) then snd (head xs) else lookup x (tail xs)
-fun member x xs = if null xs then false else if x == (fst (head xs)) then true else member x (tail xs)
-
-fun lookupBy eq x xs = if eq x (fst (head xs)) then snd (head xs) else lookupBy eq x (tail xs)
-fun memberBy eq x xs = if null xs then false else if eq x (fst (head xs)) then true else memberBy eq x (tail xs)
 
 fun map f xs = if null xs then [] else (f (head xs)) :: (map f (tail xs))
 fun filter f xs = if null xs then [] else if f (head xs) then (head xs) :: (filter f (tail xs)) else filter f (tail xs)
 
 fun fold f y xs = if null xs then y else fold f (f y (head xs)) (tail xs)
 fun fold1 f xs = fold f (head xs) (tail xs)
+fun deltafold f xs = if null (tail xs) then [] else (f (head xs) (head (tail xs))) :: (deltafold f (tail xs))
 
 fun all xs = fold (fn a b => a and b) true xs
 fun any xs = fold (fn a b => a or b) false xs
@@ -45,6 +42,12 @@ fun min a b = if a < b then a else b
 
 fun maximum xs = fold1 max xs
 fun minimum xs = fold1 min xs
+
+fun lookup x xs = if x == (fst (head xs)) then snd (head xs) else lookup x (tail xs)
+fun member x xs = if null xs then false else if x == (fst (head xs)) then true else member x (tail xs)
+
+fun lookupBy eq x xs = if eq x (fst (head xs)) then snd (head xs) else lookupBy eq x (tail xs)
+fun memberBy eq x xs = if null xs then false else if eq x (fst (head xs)) then true else memberBy eq x (tail xs)
 
 fun range n = range2 0 n
 fun range2 a b = if a == b then [] else a :: (range2 (a + 1) b)
@@ -58,39 +61,19 @@ fun revappend xs ys = if null xs then ys else revappend (tail xs) ((head xs) :: 
 fun rev xs = revappend xs []
 
 fun append xs ys = if null xs then ys else (head xs) :: (append (tail xs) ys)
-
 fun concat xs = if null xs then [] else append (head xs) (concat (tail xs))
 
-fun nth n xs = if n == 0 then head xs else nth (n - 1) (tail xs)
+; Arithmetic functions
 
 fun mod a b = a - ((a / b) * b) ; Not sure if this is right (especially with negative numbers)...
 
+; Pseudo-random number functions
+
 fun randbool randsrc = mod (head randsrc) 2 == 0
 fun randint randsrc n = mod (head randsrc) n
-
 fun randomchoice randsrc xs = nth (randint randsrc (length xs)) xs
 
-fun getcell' maze x y = nth x (nth y maze)
-
-fun getcell maze loc =
-  let (x, y) = loc in
-    nth x (nth y maze)
-  end
-
-fun offset loc dir =
-  let (x, y) = loc in
-    if dir == up then (x, y - 1) else
-    (if dir == down then (x, y + 1) else
-     (if dir == left then (x - 1, y) else
-      (if dir == right then (x + 1, y) else (x, y))))
-  end
-
-fun eqLoc loc1 loc2 =
-  let (x1, y1) = loc1 in
-  let (x2, y2) = loc2 in
-    (x1 == x2) and (y1 == y2)
-  end
-  end
+; A queue data struction
 
 fun enqueue x q =
   let (qa, qb) = q in
@@ -107,6 +90,8 @@ fun nullq q =
   let (qa, qb) = q in
     (null qa) and (null qb)
   end
+
+; A generic breadth-first search implementation
 
 fun bfs start getNbrs eq stop =
   let frontier = ([start], []) in
@@ -137,6 +122,51 @@ fun bfs' frontier visited getNbrs eq stop =
         end
     end
     end
+
+; Functions for working with directions, locations and mazes
+
+fun mod4 move = if move > 3 then move - 4 else if move < 0 then move + 4 else move
+
+fun opposite move = mod4 (move + 2)
+fun turnright move = mod4 (move + 1)
+fun turnleft move = mod4 (move - 1)
+
+fun eqLoc loc1 loc2 =
+  let (x1, y1) = loc1 in
+  let (x2, y2) = loc2 in
+    (x1 == x2) and (y1 == y2)
+  end
+  end
+
+fun offset loc dir =
+  let (x, y) = loc in
+    if dir == up then (x, y - 1) else
+    (if dir == down then (x, y + 1) else
+     (if dir == left then (x - 1, y) else
+      (if dir == right then (x + 1, y) else (x, y))))
+  end
+
+fun allNbrs loc =
+  let (x, y) = loc in
+    [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
+  end
+
+fun delta a b =
+  let (ax, ay) = a in
+  let (bx, by) = b in
+    if (bx == ax) and (by == ay + 1) then down
+    else if (bx == ax) and (by == ay - 1) then up
+    else if (bx == ax + 1) and (by == ay) then right
+    else left
+  end
+  end
+
+fun getcell maze loc =
+  let (x, y) = loc in
+    nth x (nth y maze)
+  end
+
+; Functions to assign a score to a location or direction
 
 fun simpleScore fruitLoc fruitTime newLocation contents =
   let isFruit = (eqLoc newLocation fruitLoc) and (fruitTime > 0) in
@@ -182,10 +212,7 @@ fun dirScore maze ghostLocs ghostNextLocs fruitLoc fruitTime myVitality myLocati
   end
   end
 
-fun allNbrs loc =
-  let (x, y) = loc in
-    [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
-  end
+; Functions for use in the Lambda-Man breadth-first search
 
 fun inBounds width height loc =
   let (x, y) = loc in
@@ -195,11 +222,10 @@ fun inBounds width height loc =
 fun getNbrs loc maze =
   let height = length maze in
   let width = length (head maze) in
-    filter (fn x => let (lot, t) = x in t != wall end) (map (fn loc => (loc, getcell maze loc)) (filter (fn loc => inBounds width height loc) (allNbrs loc)))
+    filter (fn x => (snd x) != wall) (map (fn loc => (loc, getcell maze loc)) (filter (fn loc => inBounds width height loc) (allNbrs loc)))
   end
   end
 
-; bfsResults : [((loc, t), (n, (prevloc, prevt)))]
 fun findGoodCells bfsResults =
   filter (fn x => ((snd (fst x)) == pill) or ((snd (fst x)) == power)) bfsResults
 
@@ -209,18 +235,6 @@ fun findBestCells goodCells =
     let closestDist = minimum (map (fn x => (fst (snd x))) goodCells) in
       filter (fn x => (fst (snd x)) == closestDist) goodCells
     end
-
-fun delta a b =
-  let (ax, ay) = a in
-  let (bx, by) = b in
-    if (bx == ax) and (by == ay + 1) then down
-    else if (bx == ax) and (by == ay - 1) then up
-    else if (bx == ax + 1) and (by == ay) then right
-    else left
-  end
-  end
-
-fun deltafold f xs = if null (tail xs) then [] else (f (head xs) (head (tail xs))) :: (deltafold f (tail xs))
 
 fun findDirs goodCell bfsResults myLoc =
   let p = rev (path goodCell bfsResults myLoc) in
@@ -243,7 +257,7 @@ fun possibleNextLocs maze ghostStatus =
      offset ghostLocation (turnleft ghostDirection)]
   end
 
-; [CellType] -> Int (-1 not found)
+; Functions to search the maze (for fruit, but could be generalized)
 fun findFruitRow row = findFruitRow' (enumerate row)
 fun findFruitRow' nrow =
   if null nrow then -1 else if (snd (head nrow)) == fruit then fst (head nrow) else findFruitRow' (tail nrow)
@@ -254,37 +268,45 @@ fun findFruit' nmaze =
     if x >= 0 then (x, (fst (head nmaze))) else findFruit' (tail nmaze)
   end
 
+; The step function
 fun stepper state world =
+  ; Unpack the parameters.
   let (maze, myStatus, ghostsStatus, fruitTime) = world in
   let (myVitality, myLocation, myDirection, lives, score) = myStatus in
+  let (nMoves, oldMove, cachedMoves, movesSinceLike, fruitLoc, randsrc, randsrc_orig) = state in
+  ; Reset the random number generator, if necessary.
+  let randsrc = if null randsrc then randsrc_orig else randsrc in
+  ; Determine the current location of each ghost, and the locations they may each move to next.
   let ghostLocs = map (fn ghostStatus => let (ghostVitality, ghostLocation, ghostDirection) = ghostStatus in ghostLocation end) ghostsStatus in
   let ghostNextLocs = concat (map (fn ghostStatus => possibleNextLocs maze ghostStatus) ghostsStatus) in
-  let (nMoves, oldMove, cachedMoves, movesSinceLike, startLocation, fruitLoc, randsrc, randsrc_orig) = state in
-  trace (nMoves, oldMove, cachedMoves, movesSinceLike) in
-  let randsrc = if null randsrc then randsrc_orig else randsrc in
-; Pick a desired move
+  ; Pick a desired move.
   let moveCachedMovesLike =
+  ; Compute the score for each direction.
     let upScore = dirScore maze ghostLocs ghostNextLocs fruitLoc fruitTime myVitality myLocation oldMove up in
     let rightScore = dirScore maze ghostLocs ghostNextLocs fruitLoc fruitTime myVitality myLocation oldMove right in
     let downScore = dirScore maze ghostLocs ghostNextLocs fruitLoc fruitTime myVitality myLocation oldMove down in
     let leftScore = dirScore maze ghostLocs ghostNextLocs fruitLoc fruitTime myVitality myLocation oldMove left in
     let scores = [upScore, rightScore, downScore, leftScore] in ; can index into this list by direction
     trace scores in
+    ; Pick a direction with maximum score.
     let maxscore = maximum (map (fn p => fst p) scores) in
     let bestdirs = map (fn p => snd p) (filter (fn s => (fst s) == maxscore) scores) in
     let randomdir = randomchoice randsrc bestdirs in
       if (maxscore <= 2) and (not (null cachedMoves)) then
+        ; There is no direction we particularly like.  Follow the cached path, unless that would lead us astray (e.g. into the path of a ghost).
         if (fst (nth (head cachedMoves) scores)) <= 0 then
           (randomdir, [], false)
         else
           (head cachedMoves, tail cachedMoves, false)
       else if (maxscore <= 2) and (movesSinceLike > 5) then
-        let bfsResults = bfs (myLocation, getcell maze myLocation) (fn x => let (loc, t) = x in getNbrs loc maze end) (fn x y => eqLoc (fst x) (fst y)) (fn x => ((snd x) >= 10) or (let score = simpleScore fruitLoc fruitTime (fst (fst x)) (snd (fst x)) in score > 2 end)) in
+        ; There is no direction we particularly like, and it's been a while (at least 5 moves) since we found anything.  There is no cached path, so compute one using a BFS of the maze.  Then follow that path, unless it would lead us astray (e.g. into the path of a ghost).
+        let bfsResults = bfs (myLocation, getcell maze myLocation) (fn x => getNbrs (fst x) maze) (fn x y => eqLoc (fst x) (fst y)) (fn x => ((snd x) >= 10) or (let score = simpleScore fruitLoc fruitTime (fst (fst x)) (snd (fst x)) in score > 2 end)) in
         let bestCells = findBestCells (findGoodCells bfsResults) in
           if null bestCells then
+            ; The BFS failed to find anything.  Fall back to the best direction previously found.
             (randomdir, [], false)
           else
-            let optimalDirs = findDirs (let (x, stuff) = head bestCells in x end) bfsResults myLocation in
+            let optimalDirs = findDirs (fst (head bestCells)) bfsResults myLocation in
               if (fst (nth (head optimalDirs) scores)) <= 0 then
                 (randomdir, [], false)
               else
@@ -293,6 +315,7 @@ fun stepper state world =
         end
         end
       else
+        ; There is a direction that sounds appealing.  Use that in preference to any cached path.
         (randomdir, [], maxscore > 2)
     end
     end
@@ -306,10 +329,9 @@ fun stepper state world =
   let (move, cachedMoves, like) = moveCachedMovesLike in
   let nMoves = nMoves + 1 in
   let movesSinceLike = if like then 0 else movesSinceLike + 1 in
-  let state = (nMoves, move, cachedMoves, movesSinceLike, startLocation, fruitLoc, tail randsrc, randsrc_orig) in
+  let state = (nMoves, move, cachedMoves, movesSinceLike, fruitLoc, tail randsrc, randsrc_orig) in
   trace (nMoves, move, cachedMoves, movesSinceLike) in
     (state, move)
-  end
   end
   end
   end
@@ -325,11 +347,9 @@ fun stepper state world =
 
 main world ghosts =
   let (maze, myStatus, ghostsStatus, fruitTime) = world in
-  let (myVitality, myLocation, myDirection, lives, score) = myStatus in
-  let randsrc = [74382,2783,89234,234,892,23487,874,829043,7862,294,2094,29,2095,29083,2098,257,81,89,91,890453,234] in
-  let state = (0, down, [], 0, myLocation, findFruit maze randsrc, randsrc) in
+  let randsrc = init_randsrc in
+  let state = (0, down, [], 0, findFruit maze, randsrc, randsrc) in
     (state, stepper)
-  end
   end
   end
   end
