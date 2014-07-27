@@ -46,6 +46,14 @@ fun min a b = if a < b then a else b
 fun maximum xs = fold1 max xs
 fun minimum xs = fold1 min xs
 
+fun range n = range2 0 n
+fun range2 a b = if a == b then [] else a :: (range2 (a + 1) b)
+
+fun zip xs ys = if null xs then [] else (head xs, head ys) :: (zip (tail xs) (tail ys))
+
+fun enumerate xs = enumerate' 0 xs
+fun enumerate' n xs = if null xs then [] else (n, head xs) :: (enumerate' (n + 1) (tail xs))
+
 fun revappend xs ys = if null xs then ys else revappend (tail xs) ((head xs) :: ys)
 fun rev xs = revappend xs []
 
@@ -130,22 +138,33 @@ fun bfs' frontier visited getNbrs eq stop =
     end
     end
 
-fun dirScore maze ghostLocs ghostNextLocs myVitality myLocation oldMove dir =
-  let newLocation = offset myLocation dir in
+fun cellScore maze ghostLocs ghostNextLocs fruitLoc fruitTime myVitality newLocation =
   let contents = getcell maze newLocation in
-  let isGhost =
-     (any (map (fn loc => eqLoc newLocation loc) ghostLocs)) or
-     (any (map (fn loc => eqLoc newLocation loc) ghostNextLocs)) in
+  let isGhost = any (map (fn loc => eqLoc newLocation loc) ghostLocs) in
+  let isGhostNext = any (map (fn loc => eqLoc newLocation loc) ghostNextLocs) in
+  let isFruit = (eqLoc newLocation fruitLoc) and (fruitTime > 0) in
   let score =
-    if (contents == wall) or
-        ((myVitality < 300 {fudge factor!}) and isGhost) then 0
-    else if isGhost then 10
-    else if (contents == pill) then 3
-    else if (contents == power) then 4
-    else if dir == opposite oldMove then 1
+    if contents == wall then 0
+    else if isGhost then
+      if myVitality < 300 {fudge factor!} then -2 else 20
+    else if isGhostNext then
+      if myVitality < 300 {fudge factor!} then -1 else 10
+    else if isFruit then 5
+    else if contents == power then 4
+    else if contents == pill then 3
     else 2 in
-    (score, dir)
+    score
   end
+  end
+  end
+  end
+  end
+
+fun dirScore maze ghostLocs ghostNextLocs fruitLoc fruitTime myVitality myLocation oldMove dir =
+  let newLocation = offset myLocation dir in
+  let score = cellScore maze ghostLocs ghostNextLocs fruitLoc fruitTime myVitality newLocation in
+  let score = if (score == 2) and (dir == opposite oldMove) then 1 else score in
+    (score, dir)
   end
   end
   end
@@ -211,20 +230,31 @@ fun possibleNextLocs maze ghostStatus =
      offset ghostLocation (turnleft ghostDirection)]
   end
 
+; [CellType] -> Int (-1 not found)
+fun findFruitRow row = findFruitRow' (enumerate row)
+fun findFruitRow' nrow =
+  if null nrow then -1 else if (snd (head nrow)) == fruit then fst (head nrow) else findFruitRow' (tail nrow)
+
+fun findFruit maze = findFruit' maze (enumerate maze)
+fun findFruit' nmaze =
+  let x = findFruitRow (snd (head nmaze)) in
+    if x >= 0 then (x, (fst (head nmaze))) else findFruit' (tail nmaze)
+  end
+
 fun stepper state world =
   let (maze, myStatus, ghostsStatus, fruitTime) = world in
   let (myVitality, myLocation, myDirection, lives, score) = myStatus in
   let ghostLocs = map (fn ghostStatus => let (ghostVitality, ghostLocation, ghostDirection) = ghostStatus in ghostLocation end) ghostsStatus in
   let ghostNextLocs = concat (map (fn ghostStatus => possibleNextLocs maze ghostStatus) ghostsStatus) in
-  let (nMoves, oldMove, cachedMoves, movesSinceLike, startLocation, randsrc, randsrc_orig) = state in
+  let (nMoves, oldMove, cachedMoves, movesSinceLike, startLocation, fruitLoc, randsrc, randsrc_orig) = state in
   trace (nMoves, oldMove, cachedMoves, movesSinceLike) in
   let randsrc = if null randsrc then randsrc_orig else randsrc in
 ; Pick a desired move
   let moveCachedMovesLike =
-    let upScore = dirScore maze ghostLocs ghostNextLocs myVitality myLocation oldMove up in
-    let rightScore = dirScore maze ghostLocs ghostNextLocs myVitality myLocation oldMove right in
-    let downScore = dirScore maze ghostLocs ghostNextLocs myVitality myLocation oldMove down in
-    let leftScore = dirScore maze ghostLocs ghostNextLocs myVitality myLocation oldMove left in
+    let upScore = dirScore maze ghostLocs ghostNextLocs fruitLoc fruitTime myVitality myLocation oldMove up in
+    let rightScore = dirScore maze ghostLocs ghostNextLocs fruitLoc fruitTime myVitality myLocation oldMove right in
+    let downScore = dirScore maze ghostLocs ghostNextLocs fruitLoc fruitTime myVitality myLocation oldMove down in
+    let leftScore = dirScore maze ghostLocs ghostNextLocs fruitLoc fruitTime myVitality myLocation oldMove left in
     let scores = [upScore, rightScore, downScore, leftScore] in ; can index into this list by direction
     trace scores in
     let maxscore = maximum (map (fn p => fst p) scores) in
@@ -263,7 +293,7 @@ fun stepper state world =
   let (move, cachedMoves, like) = moveCachedMovesLike in
   let nMoves = nMoves + 1 in
   let movesSinceLike = if like then 0 else movesSinceLike + 1 in
-  let state = (nMoves, move, cachedMoves, movesSinceLike, startLocation, tail randsrc, randsrc_orig) in
+  let state = (nMoves, move, cachedMoves, movesSinceLike, startLocation, fruitLoc, tail randsrc, randsrc_orig) in
   trace (nMoves, move, cachedMoves, movesSinceLike) in
     (state, move)
   end
@@ -284,7 +314,7 @@ main world ghosts =
   let (maze, myStatus, ghostsStatus, fruitTime) = world in
   let (myVitality, myLocation, myDirection, lives, score) = myStatus in
   let randsrc = [74382,2783,89234,234,892,23487,874,829043,7862,294,2094,29,2095,29083,2098,257,81,89,91,890453,234] in
-  let state = (0, down, [], 0, myLocation, randsrc, randsrc) in
+  let state = (0, down, [], 0, myLocation, findFruit maze randsrc, randsrc) in
     (state, stepper)
   end
   end
