@@ -131,25 +131,24 @@ fun bfs' frontier visited getNbrs eq stop =
     end
 
 fun dirScore maze ghostLocs ghostNextLocs myVitality myLocation oldMove dir =
-  if dir == opposite oldMove then (1, dir)
-  else
-    let newLocation = offset myLocation dir in
-    let contents = getcell maze newLocation in
-    let isGhost =
-       (any (map (fn loc => eqLoc newLocation loc) ghostLocs)) or
-       (any (map (fn loc => eqLoc newLocation loc) ghostNextLocs)) in
-    let score =
-      if (contents == wall) or
-          ((myVitality < 300 {fudge factor!}) and isGhost) then 0
-      else if isGhost then 10
-      else if (contents == pill) then 3
-      else if (contents == power) then 4
-      else 2 in
-      (score, dir)
-    end
-    end
-    end
-    end
+  let newLocation = offset myLocation dir in
+  let contents = getcell maze newLocation in
+  let isGhost =
+     (any (map (fn loc => eqLoc newLocation loc) ghostLocs)) or
+     (any (map (fn loc => eqLoc newLocation loc) ghostNextLocs)) in
+  let score =
+    if (contents == wall) or
+        ((myVitality < 300 {fudge factor!}) and isGhost) then 0
+    else if isGhost then 10
+    else if (contents == pill) then 3
+    else if (contents == power) then 4
+    else if dir == opposite oldMove then 1
+    else 2 in
+    (score, dir)
+  end
+  end
+  end
+  end
 
 fun allNbrs loc =
   let (x, y) = loc in
@@ -217,7 +216,6 @@ fun stepper state world =
   let (myVitality, myLocation, myDirection, lives, score) = myStatus in
   let ghostLocs = map (fn ghostStatus => let (ghostVitality, ghostLocation, ghostDirection) = ghostStatus in ghostLocation end) ghostsStatus in
   let ghostNextLocs = concat (map (fn ghostStatus => possibleNextLocs maze ghostStatus) ghostsStatus) in
-  trace ghostNextLocs in
   let (nMoves, oldMove, cachedMoves, movesSinceLike, startLocation, randsrc, randsrc_orig) = state in
   trace (nMoves, oldMove, cachedMoves, movesSinceLike) in
   let randsrc = if null randsrc then randsrc_orig else randsrc in
@@ -268,7 +266,6 @@ fun stepper state world =
   let state = (nMoves, move, cachedMoves, movesSinceLike, startLocation, tail randsrc, randsrc_orig) in
   trace (nMoves, move, cachedMoves, movesSinceLike) in
     (state, move)
-  end
   end
   end
   end
