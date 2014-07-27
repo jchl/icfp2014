@@ -94,33 +94,13 @@ toDeBruin bindings e =
       BIdentifier i j
     Tuple _ -> error "unexpected tuple"
     List _ -> error "unexpected list"
-    Pair e1 e2 ->
-      let be1 = toDeBruin bindings e1 in
-      let be2 = toDeBruin bindings e2 in
-      BPair be1 be2
-    Operator1 op e1 ->
-      let be1 = toDeBruin bindings e1 in
-      BOperator1 op be1
-    Operator2 op e1 e2 ->
-      let be1 = toDeBruin bindings e1 in
-      let be2 = toDeBruin bindings e2 in
-      BOperator2 op be1 be2
-    Trace e1 e2 ->
-      let be1 = toDeBruin bindings e1 in
-      let be2 = toDeBruin bindings e2 in
-      BTrace be1 be2
-    If e1 e2 e3 ->
-      let be1 = toDeBruin bindings e1 in
-      let be2 = toDeBruin bindings e2 in
-      let be3 = toDeBruin bindings e3 in
-      BIf be1 be2 be3
-    Fn pats e1 ->
-      let be1 = toDeBruin (pats:bindings) e1 in
-      BFn be1
-    App e1 es ->
-      let be1 = toDeBruin bindings e1 in
-      let bes = map (toDeBruin bindings) es in
-      BApp be1 bes
+    Pair e1 e2 -> BPair (toDeBruin bindings e1) (toDeBruin bindings e2)
+    Operator1 op e1 -> BOperator1 op (toDeBruin bindings e1)
+    Operator2 op e1 e2 -> BOperator2 op (toDeBruin bindings e1) (toDeBruin bindings e2)
+    Trace e1 e2 -> BTrace (toDeBruin bindings e1) (toDeBruin bindings e2)
+    If e1 e2 e3 -> BIf (toDeBruin bindings e1) (toDeBruin bindings e2) (toDeBruin bindings e3)
+    Fn pats e1 -> BFn (toDeBruin (pats:bindings) e1)
+    App e1 es -> BApp (toDeBruin bindings e1) (map (toDeBruin bindings) es)
     Let (IdPat id) e1 e2 -> toDeBruin bindings (App (Fn [id] e2) [e1])
     Let (TuplePat ids) e1 e2 -> toDeBruin bindings (App (Fn ids e2) (splitTuple (length ids) e1))
   where
