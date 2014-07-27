@@ -26,6 +26,8 @@ fun turnleft move = mod4 (move - 1)
 
 fun length xs = if null xs then 0 else 1 + length (tail xs)
 
+fun last xs = if null (tail xs) then head xs else last (tail xs)
+
 fun lookup x xs = if x == (fst (head xs)) then snd (head xs) else lookup x (tail xs)
 fun member x xs = if null xs then false else if x == (fst (head xs)) then true else member x (tail xs)
 
@@ -167,6 +169,36 @@ fun getNbrs loc maze =
   end
   end
 
+; bfsResults : [((loc, t), (n, (prevloc, prevt)))]
+fun findGoodCells bfsResults =
+  filter (fn x => ((snd x) == pill) or ((snd x) == power)) (map (fn x => fst x) bfsResults)
+
+fun delta a b =
+  let (ax, ay) = a in
+  let (bx, by) = b in
+    if (bx == ax) and (by == ay + 1) then up
+    else if (bx == ax) and (by == ay - 1) then down
+    else if (bx == ax + 1) and (by == ay) then right
+    else left
+  end
+  end
+
+fun deltafold f xs = if null (tail xs) then [] else (f (head xs) (head (tail xs))) :: (deltafold f (tail xs))
+
+fun findDir goodCell bfsResults myLoc =
+  let p = rev (path goodCell bfsResults myLoc) in
+  let deltas = deltafold delta p in
+    head deltas
+  end
+  end
+
+fun path targetLocT bfsResults sourceLoc =
+  if eqLoc (fst targetLocT) sourceLoc then [fst targetLocT]
+  else
+    let (n, prevT) = lookupBy (fn x y => eqLoc (fst x) (fst y)) targetLocT bfsResults in
+      (fst targetLocT) :: (path prevT bfsResults sourceLoc)
+    end
+
 fun stepper state world =
   let (maze, myStatus, ghostsStatus, fruitTime) = world in
   let (myVitality, myLocation, myDirection, lives, score) = myStatus in
@@ -187,21 +219,23 @@ fun stepper state world =
     let scores = [fwdScore, bwdScore, leftScore, rightScore] in
 ;    trace scores in
     let maxscore = maximum (map (fn p => fst p) scores) in
+    let bestdirs = map (fn p => snd p) (filter (fn s => (fst s) == maxscore) scores) in
     trace (maxscore, maxscore <= 2, maxscore > 2) in
-      if (maxscore <= 2) and (movesSinceLike > 20) then
+      if (maxscore <= 2) and (movesSinceLike > 10) then
         trace 99 in
-        let bfsResult = bfs (myLocation, getcell maze myLocation) (fn x => let (loc, t) = x in getNbrs loc maze end) (fn x y => eqLoc (fst x) (fst y)) (fn x => (snd x) >= 5) in
-        trace bfsResult in
-          (oldMove, false)
+        let bfsResults = bfs (myLocation, getcell maze myLocation) (fn x => let (loc, t) = x in getNbrs loc maze end) (fn x y => eqLoc (fst x) (fst y)) (fn x => {((snd x) >= 20) or} ((snd (fst x)) == pill) or ((snd (fst x)) == power)) in
+;        trace bfsResults in
+        let goodCells = findGoodCells bfsResults in
+          if null goodCells then (randomchoice randsrc bestdirs, false) else (findDir (head goodCells) bfsResults myLocation, false)
         end
+;        end
         end
         end
       else
         trace 88 in
-        let bestdirs = map (fn p => snd p) (filter (fn s => (fst s) == maxscore) scores) in
           (randomchoice randsrc bestdirs, maxscore > 2)
         end
-        end
+    end
     end
     end
 ;    end
