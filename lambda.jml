@@ -196,12 +196,12 @@ fun delta a b =
 
 fun deltafold f xs = if null (tail xs) then [] else (f (head xs) (head (tail xs))) :: (deltafold f (tail xs))
 
-fun findDir goodCell bfsResults myLoc =
+fun findDirs goodCell bfsResults myLoc =
   let p = rev (path goodCell bfsResults myLoc) in
   let deltas = deltafold delta p in
-  trace deltas in
-    head deltas
-  end
+;  trace deltas in
+    deltas
+;  end
   end
   end
 
@@ -218,13 +218,13 @@ fun stepper state world =
   let ghostLocs = map (fn ghostStatus => let (ghostVitality, ghostLocation, ghostDirection) = ghostStatus in ghostLocation end) ghostsStatus in
   let ghostNextLocs = map (fn ghostStatus => let (ghostVitality, ghostLocation, ghostDirection) = ghostStatus in offset ghostLocation ghostDirection end) ghostsStatus in
 ;  trace (1, myLocation, getcell maze myLocation) in
-  let (nMoves, oldMove, followMode, movesSinceLike, startLocation, randsrc, randsrc_orig) = state in
+  let (nMoves, oldMove, cachedMoves, followMode, movesSinceLike, startLocation, randsrc, randsrc_orig) = state in
   trace (nMoves, oldMove, followMode, movesSinceLike) in
   let randsrc = if null randsrc then randsrc_orig else randsrc in
 ;  let followMode = if eqLoc startLocation myLocation then 1 - followMode else followMode in
 ;  trace followMode in
 ; Pick a desired move
-  let (move, like) =
+  let (move, cachedMoves, like) =
     let upScore = dirScore maze ghostLocs ghostNextLocs myVitality myLocation oldMove up in
     let rightScore = dirScore maze ghostLocs ghostNextLocs myVitality myLocation oldMove right in
     let downScore = dirScore maze ghostLocs ghostNextLocs myVitality myLocation oldMove down in
@@ -234,20 +234,22 @@ fun stepper state world =
     let maxscore = maximum (map (fn p => fst p) scores) in
     let bestdirs = map (fn p => snd p) (filter (fn s => (fst s) == maxscore) scores) in
     trace (maxscore, maxscore <= 2, maxscore > 2) in
-      if (maxscore <= 2) and (movesSinceLike > 10) then
-        trace 99 in
-        let bfsResults = bfs (myLocation, getcell maze myLocation) (fn x => let (loc, t) = x in getNbrs loc maze end) (fn x y => eqLoc (fst x) (fst y)) (fn x => {((snd x) >= 20) or} ((snd (fst x)) == pill) or ((snd (fst x)) == power)) in
-        trace bfsResults in
+      if (maxscore <= 2) and (not (null cachedMoves)) then
+        (head cachedMoves, tail cachedMoves, false)
+      else if (maxscore <= 2) and (movesSinceLike > 10) then
+        let bfsResults = bfs (myLocation, getcell maze myLocation) (fn x => let (loc, t) = x in getNbrs loc maze end) (fn x y => eqLoc (fst x) (fst y)) (fn x => ((snd x) >= 15) or ((snd (fst x)) == pill) or ((snd (fst x)) == power)) in
+;        trace bfsResults in
         let bestCells = findBestCells (findGoodCells bfsResults) in
-          if null bestCells then (randomchoice randsrc bestdirs, false) else (findDir (let (x, stuff) = head bestCells in x end) bfsResults myLocation, false)
+          if null bestCells then (randomchoice randsrc bestdirs, [], false)
+          else
+            let optimalDirs = findDirs (let (x, stuff) = head bestCells in x end) bfsResults myLocation in
+              (head optimalDirs, tail optimalDirs, false)
+            end
         end
-        end
-        end
+;        end
         end
       else
-        trace 88 in
-          (randomchoice randsrc bestdirs, maxscore > 2)
-        end
+        (randomchoice randsrc bestdirs, [], maxscore > 2)
     end
     end
     end
@@ -260,8 +262,8 @@ fun stepper state world =
   trace (move, like) in
   let nMoves = nMoves + 1 in
   let movesSinceLike = if like then 0 else movesSinceLike + 1 in
-  let state = (nMoves, move, followMode, movesSinceLike, startLocation, tail randsrc, randsrc_orig) in
-    trace (nMoves, move, followMode, movesSinceLike) in (state, move) end
+  let state = (nMoves, move, cachedMoves, followMode, movesSinceLike, startLocation, tail randsrc, randsrc_orig) in
+    trace (nMoves, move, cachedMoves, followMode, movesSinceLike) in (state, move) end
   end
   end
   end
@@ -286,7 +288,7 @@ main world ghosts =
   let (myVitality, myLocation, myDirection, lives, score) = myStatus in
 ;  trace (0, myLocation, getcell maze myLocation) in
   let randsrc = [74382,2783,89234,234,892,23487,874,829043,7862,294,2094,29,2095,29083,2098,257,81,89,91,890453,234] in
-  let state = (0, down, followRight, 0, myLocation, randsrc, randsrc) in
+  let state = (0, down, [], followRight, 0, myLocation, randsrc, randsrc) in
     (state, stepper)
   end
 ;  end
