@@ -1,17 +1,14 @@
 module Main where
 
-import JML
-import JMLTokens
-import JMLCompiler
-import GCC
-import Types
-import Control.Monad
-import System.Environment
+import Prelude hiding (lex)
+import System.Environment (getArgs)
+import JMLTokens (lex)
+import JML (parse)
+import JMLCompiler (compile)
+import GCC (assemble, writeAsm)
 
 main :: IO ()
 main =
   do [inFilename, outFilename] <- getArgs
      s <- readFile inFilename
-     let p = (parse . jmlLex) s
-     print p
-     writeAsmWithLabels outFilename (({- assemble . -} compileJml) p)
+     writeAsm outFilename ((assemble . compile . parse . lex) s)

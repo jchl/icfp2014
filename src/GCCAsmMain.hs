@@ -1,11 +1,10 @@
 module Main where
 
-import GCC
 import System.Environment
+import GCC
 
 main :: IO ()
 main =
   do [inFilename, outFilename] <- getArgs
      asm <- readAsmWithLabels inFilename
-     let code = assemble asm
-     writeAsm outFilename code
+     writeAsm outFilename (assemble asm)

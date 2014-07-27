@@ -1,5 +1,6 @@
 {
-module JMLTokens (Token(..), jmlLex) where
+module JMLTokens (Token(..), lex) where
+import Prelude hiding (lex)
 }
 
 %wrapper "posn"
@@ -84,6 +85,6 @@ data Token = TokenOpenParen
            | TokenIdentifier String
            deriving (Show)
 
-jmlLex = alexScanTokens
+lex = alexScanTokens
 
 }

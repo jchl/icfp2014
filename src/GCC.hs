@@ -107,43 +107,8 @@ parseInstruction "BRK" [] = BRK
 
 data InstructionOrLabel = Instruction Instruction | Label String
 
-instance Show InstructionOrLabel where
-  show (Instruction i) = "  " ++ show i
-  show (Label label) = label ++ ":"
-
-type ProgramWithLabels = [InstructionOrLabel]
 type Program = [Instruction]
-
-lineToMaybeInstructionOrLabel :: String -> Maybe InstructionOrLabel
-lineToMaybeInstructionOrLabel s =
-  let ws = words s in
-  case ws of
-    [] -> Nothing
-    w:ws ->
-      if (last w == ':') && (ws == []) then
-        Just $ Label $ init w
-      else
-        Just $ Instruction $ parseInstruction w ws
-
-stripComment :: String -> String
-stripComment = takeWhile (/= ';')
-
-readAsmWithLabels :: FilePath -> IO ProgramWithLabels
-readAsmWithLabels filename = liftM (catMaybes . map lineToMaybeInstructionOrLabel . map stripComment . lines) $ readFile filename
-
-{-
-numberInstructionsOrLabels :: ProgramWithLabels -> [Either (Instruction, Int) String]
-numberInstructionsOrLabels = numberInstructionsOrLabels' 0
-  where
-    numberInstructionsOrLabels' n p =
-      case p of
-        [] -> []
-        (Instruction i):p' -> (Left (i, n)) : numberInstructionsOrLabels' (n + 1) p'
-        (Label l):p' -> (Right l) : numberInstructionsOrLabels' n p'
--}
-
-writeAsmWithLabels :: FilePath -> ProgramWithLabels -> IO ()
-writeAsmWithLabels filename = writeFile filename . unlines . map show
+type ProgramWithLabels = [InstructionOrLabel]
 
 writeAsm :: FilePath -> Program -> IO ()
 writeAsm filename = writeFile filename . unlines . map show
@@ -163,12 +128,41 @@ assemble p = assemble' (buildSymtab 0 p) p
         (Instruction i):p' -> assembleInstruction symtab i : assemble' symtab p'
         (Label _):p' -> assemble' symtab p'
 
-    assembleInstruction symtab (SEL a1 a2) = SEL (lookupLabel symtab a1) (lookupLabel symtab a2)
-    assembleInstruction symtab (LDF a) = LDF (lookupLabel symtab a)
-    assembleInstruction symtab (TSEL a1 a2) = TSEL (lookupLabel symtab a1) (lookupLabel symtab a2)
-    assembleInstruction symtab i = i
+    assembleInstruction symtab i =
+      case i of
+        SEL a1 a2 -> SEL (lookupLabel symtab a1) (lookupLabel symtab a2)
+        LDF a -> LDF (lookupLabel symtab a)
+        TSEL a1 a2 -> TSEL (lookupLabel symtab a1) (lookupLabel symtab a2)
+        _ -> i
 
     lookupLabel symtab a =
       case a of
         RefAddr label -> AbsAddr $ fromJust $ lookup label symtab
         AbsAddr _ -> a
+
+-- The following are not currently used.
+instance Show InstructionOrLabel where
+  show (Instruction i) = "  " ++ show i
+  show (Label label) = label ++ ":"
+
+readAsmWithLabels :: FilePath -> IO ProgramWithLabels
+readAsmWithLabels filename =
+  do s <- readFile filename
+     return $ (catMaybes . map lineToMaybeInstructionOrLabel . map stripComment . lines) s
+  where
+    lineToMaybeInstructionOrLabel :: String -> Maybe InstructionOrLabel
+    lineToMaybeInstructionOrLabel s =
+      let ws = words s in
+      case ws of
+        [] -> Nothing
+        w:ws ->
+          if (last w == ':') && (ws == []) then
+            Just $ Label $ init w
+          else
+            Just $ Instruction $ parseInstruction w ws
+
+    stripComment :: String -> String
+    stripComment = takeWhile (/= ';')
+
+writeAsmWithLabels :: FilePath -> ProgramWithLabels -> IO ()
+writeAsmWithLabels filename = writeFile filename . unlines . map show

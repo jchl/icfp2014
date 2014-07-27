@@ -1,4 +1,4 @@
-module JMLCompiler where
+module JMLCompiler (compile) where
 
 import Data.List
 import Types
@@ -257,14 +257,14 @@ compileDecl consts bindings id e =
   compileFunctionBody id id ie ++
     concat (map (\(label, ie) -> compileFunctionBody id (id ++ "_fn" ++ show label) ie) labeledIes)
 
-compileJml :: JmlProgram -> ProgramWithLabels
-compileJml (consts, funs, (mainPats, e)) = [Instruction $ DUM (length funNames)] ++
-                                             map (\lf -> Instruction $ LDF (RefAddr lf)) funNames ++
-                                             [Instruction $ LDF (RefAddr "main"),
-                                              Instruction $ RAP (length funNames),
-                                              Instruction $ RTN] ++
-                                             compileDecl consts [funNames, mainPats] "main" e ++
-                                             concat (map compileFunDecl funs)
+compile :: JmlProgram -> ProgramWithLabels
+compile (consts, funs, (mainPats, e)) = [Instruction $ DUM (length funNames)] ++
+                                          map (\lf -> Instruction $ LDF (RefAddr lf)) funNames ++
+                                          [Instruction $ LDF (RefAddr "main"),
+                                           Instruction $ RAP (length funNames),
+                                           Instruction $ RTN] ++
+                                          compileDecl consts [funNames, mainPats] "main" e ++
+                                          concat (map compileFunDecl funs)
   where
     funNames = map (\(id, _, _) -> id) funs
     compileFunDecl (id, pats, e) = compileDecl consts [pats, funNames, mainPats] id e
