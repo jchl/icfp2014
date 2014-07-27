@@ -49,6 +49,7 @@ desugarListsAndTuples e =
     listToPair [] = Number 0
     listToPair (e:es) = Pair e (listToPair es)
 
+    tupleToPair [] = error $ "empty tuple"
     tupleToPair [e1] = e1
     tupleToPair (e:es) = Pair e (tupleToPair es)
 

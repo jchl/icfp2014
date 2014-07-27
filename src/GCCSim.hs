@@ -1,7 +1,6 @@
 module GCCSim where
 
 import GCC
-import Data.List
 
 data DataValue = VInt Int32 |
                  VCons DataValue DataValue |
@@ -19,9 +18,11 @@ isInt _ = False
 
 fromInt :: DataValue -> Int32
 fromInt (VInt n) = n
+fromInt _ = error $ "fromInt"
 
 fromJoin :: ControlValue -> Addr
 fromJoin (VJoin a) = a
+fromJoin _ = error $ "fromJoin"
 
 type EnvPtr = [Env]
 data Env = Env [DataValue] |
@@ -39,7 +40,7 @@ sim i =
   case i of
     LDC n -> \(c, s, d, e, ed) -> Just (c + 1, VInt n : s, d, e, ed)
     LD n i -> \(c, s, d, e, ed) -> Just (c + 1, loadEnv (e !! n) ed i: s, d, e, ed)
-    ST n 1 -> \(c, s, d, e, ed) -> error $ "ST not yet implemented"
+    ST n i -> \(c, s, d, e, ed) -> error $ "ST not yet implemented"
     ADD -> liftOp2 $ intop (+)
     SUB -> liftOp2 $ intop (-)
     MUL -> liftOp2 $ intop (*)

@@ -1,10 +1,8 @@
 module GCC where
 
-import Text.Regex.Posix
 import Data.Maybe
-import Data.Char
 import Data.List
-import Control.Monad
+import Data.Char
 
 trim :: String -> String
 trim = f . f
@@ -104,6 +102,7 @@ parseInstruction "TAP" [n] = TAP (read n)
 parseInstruction "TRAP" [n] = TRAP (read n)
 parseInstruction "DBUG" [] = DBUG
 parseInstruction "BRK" [] = BRK
+parseInstruction s args = error $ "bad instruction: " ++ s ++ " " ++ intercalate " " args
 
 data InstructionOrLabel = Instruction Instruction | Label String
 

@@ -56,10 +56,6 @@ tokens :-
 
 {
 
-tokenError :: (String -> String) -> AlexPosn -> String -> a
-tokenError f (AlexPn char line col) s =
-   error $ f s ++ " at line " ++ show line ++ ", column " ++ show col
-
 data Token = TokenOpenParen
            | TokenCloseParen
            | TokenOpenBracket

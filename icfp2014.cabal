@@ -11,41 +11,27 @@ Cabal-version:       >= 1.8
 Build-type:          Simple
 Extra-source-files:  README.md
 
-Library
-  Hs-source-dirs:    src
-  Exposed-modules:   JML, JMLTokens, GCC, GCCSim, Types, JMLCompiler
-  Build-depends:     base >= 3 && < 5, array, containers, text, bytestring, time, regex-posix, mtl
-  Build-tools:       alex, happy
-  Ghc-options:       -O2
--- -auto-all
--- Ghc-options:       -Wall
-
 Executable jmlcc
   Hs-source-dirs:    src
   Main-is:           JMLCompilerMain.hs
-  Build-depends:     base, array, containers, text, bytestring, time, regex-posix, mtl
-  Other-modules:     JML, JMLTokens, GCC, GCCSim, Types, JMLCompiler
-  Ghc-options:       -O2 -rtsopts
--- -prof -auto-all
--- -threaded
+  Build-depends:     base, containers, mtl, array
+  Build-tools:       alex, happy
+  Other-modules:     JML, JMLTokens, GCC, Types, JMLCompiler
+  Ghc-options:       -O2 -rtsopts -Wall -fno-warn-unused-matches -fno-warn-name-shadowing
 
 Executable gccasm
   Hs-source-dirs:    src
   Main-is:           GCCAsmMain.hs
-  Build-depends:     base, array, containers, text, bytestring, time, regex-posix, mtl
+  Build-depends:     base, containers, mtl
   Other-modules:     GCC
-  Ghc-options:       -O2 -rtsopts
--- -prof -auto-all
--- -threaded
+  Ghc-options:       -O2 -rtsopts -Wall -Werror -fno-warn-unused-matches -fno-warn-name-shadowing
 
 Executable gccsim
   Hs-source-dirs:    src
   Main-is:           GCCSimMain.hs
-  Build-depends:     base, array, containers, text, bytestring, time, regex-posix, mtl
+  Build-depends:     base, containers, mtl
   Other-modules:     GCC, GCCSim
-  Ghc-options:       -O2 -rtsopts
--- -prof -auto-all
--- -threaded
+  Ghc-options:       -O2 -rtsopts -Wall -Werror -fno-warn-unused-matches -fno-warn-name-shadowing -fno-warn-incomplete-patterns
 
 Source-repository head
   Type:              git

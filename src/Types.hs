@@ -24,17 +24,17 @@ instance Show Op1 where
   show Head = "head"
   show Tail = "tail"
 
-ops1Map = [
-  ( "not", Not ),
-  ( "fst", Fst ),
-  ( "snd", Snd ),
-  ( "break", Break ),
-  ( "null", Null ),
-  ( "head", Head ),
-  ( "tail", Tail ) ]
-
 stringToOp1 :: String -> Op1
 stringToOp1 s = fromJust $ lookup s ops1Map
+  where
+    ops1Map = [
+      ( "not", Not ),
+      ( "fst", Fst ),
+      ( "snd", Snd ),
+      ( "break", Break ),
+      ( "null", Null ),
+      ( "head", Head ),
+      ( "tail", Tail ) ]
 
 data Op2 = Plus |
            Minus |
@@ -65,23 +65,23 @@ instance Show Op2 where
   show Or = "or"
   show ListCons = "::"
 
-ops2Map = [
-  ( "+", Plus ),
-  ( "-", Minus ),
-  ( "*", Times ),
-  ( "/", Divide ),
-  ( "==", Equals ),
-  ( "!=", NotEquals ),
-  ( "<", LessThan ),
-  ( ">", GreaterThan ),
-  ( "<=", LessThanOrEquals ),
-  ( ">=", GreaterThanOrEquals ),
-  ( "and", And ),
-  ( "or", Or ),
-  ( "::", ListCons ) ]
-
 stringToOp2 :: String -> Op2
 stringToOp2 s = fromJust $ lookup s ops2Map
+  where
+    ops2Map = [
+      ( "+", Plus ),
+      ( "-", Minus ),
+      ( "*", Times ),
+      ( "/", Divide ),
+      ( "==", Equals ),
+      ( "!=", NotEquals ),
+      ( "<", LessThan ),
+      ( ">", GreaterThan ),
+      ( "<=", LessThanOrEquals ),
+      ( ">=", GreaterThanOrEquals ),
+      ( "and", And ),
+      ( "or", Or ),
+      ( "::", ListCons ) ]
 
 data LetPat = IdPat Identifier |
               TuplePat [Identifier]
