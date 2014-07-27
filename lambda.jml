@@ -141,7 +141,7 @@ fun bfs' frontier visited getNbrs eq stop =
 fun simpleScore fruitLoc fruitTime newLocation contents =
   let isFruit = (eqLoc newLocation fruitLoc) and (fruitTime > 0) in
   let score =
-    if contents == wall then 0
+    if contents == wall then -1
     else if isFruit then 5
     else if contents == power then 4
     else if contents == pill then 3
@@ -155,13 +155,14 @@ fun cellScore ghostLocs ghostNextLocs fruitLoc fruitTime myVitality newLocation 
   let isGhostNext = any (map (fn loc => eqLoc newLocation loc) ghostNextLocs) in
   let isFruit = (eqLoc newLocation fruitLoc) and (fruitTime > 0) in
   let score =
-    if contents == wall then 0
+    if contents == wall then -1
     else if isGhost then
-      if myVitality < 300 {fudge factor!} then -2 else 20
+      if myVitality < 300 {fudge factor!} then -3 else 30
     else if isGhostNext then
-      if myVitality < 300 {fudge factor!} then -1 else 10
+      if myVitality < 300 {fudge factor!} then -2 else 20
     else if isFruit then 5
-    else if contents == power then 4
+    else if contents == power then
+      if myVitality > 0 then 0 else 4 ; don't take another power pill when already invincible
     else if contents == pill then 3
     else 2 in
     score
@@ -273,7 +274,7 @@ fun stepper state world =
     let bestdirs = map (fn p => snd p) (filter (fn s => (fst s) == maxscore) scores) in
     let randomdir = randomchoice randsrc bestdirs in
       if (maxscore <= 2) and (not (null cachedMoves)) then
-        if (fst (nth (head cachedMoves) scores)) == 0 then
+        if (fst (nth (head cachedMoves) scores)) <= 0 then
           (randomdir, [], false)
         else
           (head cachedMoves, tail cachedMoves, false)
@@ -284,7 +285,7 @@ fun stepper state world =
             (randomdir, [], false)
           else
             let optimalDirs = findDirs (let (x, stuff) = head bestCells in x end) bfsResults myLocation in
-              if (fst (nth (head optimalDirs) scores)) == 0 then
+              if (fst (nth (head optimalDirs) scores)) <= 0 then
                 (randomdir, [], false)
               else
                 (head optimalDirs, tail optimalDirs, false)

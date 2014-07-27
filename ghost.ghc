@@ -104,3 +104,6 @@ HHH: ; not fright mode
 mov a,e
 int 0
 hlt
+
+; other ideas:
+;  copy lambda-man's moves
