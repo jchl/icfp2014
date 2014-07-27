@@ -129,44 +129,46 @@ data IExpr = INumber Int |
              IFn Int |
              IApp IExpr [IExpr]
 
-extractFuncs :: [(Int, IExpr)] -> BExpr -> (IExpr, [(Int, IExpr)])
-extractFuncs ctx e =
+extractFuncs :: BExpr -> State [(Int, IExpr)] IExpr
+extractFuncs e =
   case e of
-    BNumber n -> (INumber n, ctx)
-    BIdentifier i j -> (IIdentifier i j, ctx)
+    BNumber n -> return $ INumber n
+    BIdentifier i j -> return $ IIdentifier i j
     BPair e1 e2 ->
-      let (ie1, ctx1) = extractFuncs ctx e1 in
-      let (ie2, ctx2) = extractFuncs ctx1 e2 in
-      (IPair ie1 ie2, ctx2)
+      do ie1 <- extractFuncs e1
+         ie2 <- extractFuncs e2
+         return $ IPair ie1 ie2
     BOperator1 op e1 ->
-      let (ie1, ctx1) = extractFuncs ctx e1 in
-      (IOperator1 op ie1, ctx1)
+      do ie1 <- extractFuncs e1
+         return $ IOperator1 op ie1
     BOperator2 op e1 e2 ->
-      let (ie1, ctx1) = extractFuncs ctx e1 in
-      let (ie2, ctx2) = extractFuncs ctx1 e2 in
-      (IOperator2 op ie1 ie2, ctx2)
+      do ie1 <- extractFuncs e1
+         ie2 <- extractFuncs e2
+         return $ IOperator2 op ie1 ie2
     BTrace e1 e2 ->
-      let (ie1, ctx1) = extractFuncs ctx e1 in
-      let (ie2, ctx2) = extractFuncs ctx1 e2 in
-      (ITrace ie1 ie2, ctx2)
+      do ie1 <- extractFuncs e1
+         ie2 <- extractFuncs e2
+         return $ ITrace ie1 ie2
     BIf e1 e2 e3 ->
-      let (ie1, ctx1) = extractFuncs ctx e1 in
-      let (ie2, ctx2) = extractFuncs ctx1 e2 in
-      let (ie3, ctx3) = extractFuncs ctx2 e3 in
-      (IIf ie1 ie2 ie3, ctx3)
+      do ie1 <- extractFuncs e1
+         ie2 <- extractFuncs e2
+         ie3 <- extractFuncs e3
+         return $ IIf ie1 ie2 ie3
     BFn e1 ->
-      let (ie1, ctx1) = extractFuncs ctx e1 in
-      let label = allocLabel ctx1 in
-      (IFn label, (label, ie1):ctx1)
+      do ie1 <- extractFuncs e1
+         label <- allocLabel ie1
+         return $ IFn label
     BApp e1 es ->
-      let (ie1, ctx1) = extractFuncs ctx e1 in
-      let (ies, ctx2) =
-            foldr (\e (ies, ctx) -> let (ie', ctx') = extractFuncs ctx e in (ie':ies, ctx'))
-                  ([], ctx1) es in
-      (IApp ie1 ies, ctx2)
+      do ie1 <- extractFuncs e1
+         ies <- mapM extractFuncs es
+         return $ IApp ie1 ies
   where
-    allocLabel :: [(Int, a)] -> Int
-    allocLabel ctx = maximum (0 : map fst ctx) + 1
+    allocLabel :: IExpr -> State [(Int, IExpr)] Int
+    allocLabel ie =
+      do ctx <- get
+         let label = maximum (0 : map fst ctx) + 1
+         put $ (label, ie):ctx
+         return label
 
 compileExpr :: String -> String -> IExpr -> State Int ProgramWithLabels
 compileExpr fnname innerFnname e =
@@ -250,7 +252,8 @@ compileFunctionBody fnname label ie =
 
 compileFunDecl :: [ConstDecl] -> [[Identifier]] -> Identifier -> Expr -> ProgramWithLabels
 compileFunDecl consts bindings id e =
-  let (ie, labeledIes) = (extractFuncs [] . toDeBruin bindings . desugarBools . desugarListsAndTuples . substConsts consts) e in
+  let be = (toDeBruin bindings . desugarBools . desugarListsAndTuples . substConsts consts) e in
+  let (ie, labeledIes) = runState (extractFuncs be) [] in
   compileFunctionBody id id ie ++ concat (map (\(label, ie) -> compileFunctionBody id (id ++ "_fn" ++ show label) ie) labeledIes)
 
 compileJml :: JmlProgram -> ProgramWithLabels
