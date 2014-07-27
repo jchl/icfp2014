@@ -2,7 +2,6 @@
 (setq jml-keywords '("fn" "fun" "val" "const" "main" "if" "then" "else" "let" "in" "end" "trace"))
 (setq jml-constants '("true" "false"))
 
-
 (setq jml-operators-regexp (regexp-opt jml-operators 'words))
 (setq jml-keywords-regexp (regexp-opt jml-keywords 'words))
 (setq jml-constants-regexp (regexp-opt jml-constants 'words))
@@ -13,7 +12,6 @@
     (, jml-keywords-regexp . font-lock-keyword-face)
     (, jml-constants-regexp . font-lock-constant-face)
 ))
-
 
 (define-derived-mode jml-mode fundamental-mode
   (setq font-lock-defaults '(jml-font-lock-keywords))
