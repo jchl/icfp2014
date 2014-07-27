@@ -52,26 +52,26 @@ desugarListsAndTuples e = case e of
   App e es -> App (desugarListsAndTuples e) (map desugarListsAndTuples es)
   Let pat e1 e2 -> Let pat (desugarListsAndTuples e1) (desugarListsAndTuples e2)
 
-elimBoolsExpr :: Expr -> Expr
-elimBoolsExpr e = case e of
+elimBools :: Expr -> Expr
+elimBools e = case e of
   Number n -> Number n
   Boolean True -> Number 1
   Boolean False -> Number 0
   Tuple _ -> error "unexpected tuple"
   List _ -> error "unexpected list"
   Identifier id -> Identifier id
-  Pair e1 e2 -> Pair (elimBoolsExpr e1) (elimBoolsExpr e2)
-  Operator1 Not e -> Operator2 Minus (Number 1) (elimBoolsExpr e)
-  Operator1 op e -> Operator1 op (elimBoolsExpr e)
-  Operator2 And e1 e2 -> If (elimBoolsExpr e1) (elimBoolsExpr e2) (Number 0)
-  Operator2 Or e1 e2 -> If (elimBoolsExpr e1) (Number 1) (elimBoolsExpr e2)
-  Operator2 NotEquals e1 e2 -> elimBoolsExpr (Operator1 Not (Operator2 Equals e1 e2))
-  Operator2 op e1 e2 -> Operator2 op (elimBoolsExpr e1) (elimBoolsExpr e2)
-  Trace e1 e2 -> Trace (elimBoolsExpr e1) (elimBoolsExpr e2)
-  If e1 e2 e3 -> If (elimBoolsExpr e1) (elimBoolsExpr e2) (elimBoolsExpr e3)
-  Fn pats e -> Fn pats (elimBoolsExpr e)
-  App e es -> App (elimBoolsExpr e) (map elimBoolsExpr es)
-  Let pat e1 e2 -> Let pat (elimBoolsExpr e1) (elimBoolsExpr e2)
+  Pair e1 e2 -> Pair (elimBools e1) (elimBools e2)
+  Operator1 Not e -> Operator2 Minus (Number 1) (elimBools e)
+  Operator1 op e -> Operator1 op (elimBools e)
+  Operator2 And e1 e2 -> If (elimBools e1) (elimBools e2) (Number 0)
+  Operator2 Or e1 e2 -> If (elimBools e1) (Number 1) (elimBools e2)
+  Operator2 NotEquals e1 e2 -> elimBools (Operator1 Not (Operator2 Equals e1 e2))
+  Operator2 op e1 e2 -> Operator2 op (elimBools e1) (elimBools e2)
+  Trace e1 e2 -> Trace (elimBools e1) (elimBools e2)
+  If e1 e2 e3 -> If (elimBools e1) (elimBools e2) (elimBools e3)
+  Fn pats e -> Fn pats (elimBools e)
+  App e es -> App (elimBools e) (map elimBools es)
+  Let pat e1 e2 -> Let pat (elimBools e1) (elimBools e2)
 
 data BExpr = BNumber Int |
              BIdentifier Int Int |
@@ -83,8 +83,8 @@ data BExpr = BNumber Int |
              BFn BExpr |
              BApp BExpr [BExpr]
 
-toDeBruin :: Expr -> [[Identifier]] -> BExpr
-toDeBruin e bindings =
+toDeBruin :: [[Identifier]] -> Expr -> BExpr
+toDeBruin bindings e =
   case e of
     Number n -> BNumber n
     Boolean b -> error "unexpected boolean"
@@ -94,34 +94,34 @@ toDeBruin e bindings =
     Tuple _ -> error "unexpected tuple"
     List _ -> error "unexpected list"
     Pair e1 e2 ->
-      let be1 = toDeBruin e1 bindings in
-      let be2 = toDeBruin e2 bindings in
+      let be1 = toDeBruin bindings e1 in
+      let be2 = toDeBruin bindings e2 in
       BPair be1 be2
     Operator1 op e1 ->
-      let be1 = toDeBruin e1 bindings in
+      let be1 = toDeBruin bindings e1 in
       BOperator1 op be1
     Operator2 op e1 e2 ->
-      let be1 = toDeBruin e1 bindings in
-      let be2 = toDeBruin e2 bindings in
+      let be1 = toDeBruin bindings e1 in
+      let be2 = toDeBruin bindings e2 in
       BOperator2 op be1 be2
     Trace e1 e2 ->
-      let be1 = toDeBruin e1 bindings in
-      let be2 = toDeBruin e2 bindings in
+      let be1 = toDeBruin bindings e1 in
+      let be2 = toDeBruin bindings e2 in
       BTrace be1 be2
     If e1 e2 e3 ->
-      let be1 = toDeBruin e1 bindings in
-      let be2 = toDeBruin e2 bindings in
-      let be3 = toDeBruin e3 bindings in
+      let be1 = toDeBruin bindings e1 in
+      let be2 = toDeBruin bindings e2 in
+      let be3 = toDeBruin bindings e3 in
       BIf be1 be2 be3
     Fn pats e1 ->
-      let be1 = toDeBruin e1 (pats:bindings) in
+      let be1 = toDeBruin (pats:bindings) e1 in
       BFn be1
     App e1 es ->
-      let be1 = toDeBruin e1 bindings in
-      let bes = map (flip toDeBruin bindings) es in
+      let be1 = toDeBruin bindings e1 in
+      let bes = map (toDeBruin bindings) es in
       BApp be1 bes
-    Let (IdPat id) e1 e2 -> toDeBruin (App (Fn [id] e2) [e1]) bindings
-    Let (TuplePat ids) e1 e2 -> toDeBruin (App (Fn ids e2) (splitTuple (length ids) e1)) bindings
+    Let (IdPat id) e1 e2 -> toDeBruin bindings (App (Fn [id] e2) [e1])
+    Let (TuplePat ids) e1 e2 -> toDeBruin bindings (App (Fn ids e2) (splitTuple (length ids) e1))
   where
     lookupIdent :: [[Identifier]] -> Identifier -> (Int, Int)
     lookupIdent = lookupIdent' 0
@@ -148,39 +148,39 @@ data IExpr = INumber Int |
              IFn Int |
              IApp IExpr [IExpr]
 
-extractFuncs :: BExpr -> [(Int, IExpr)] -> (IExpr, [(Int, IExpr)])
-extractFuncs e ctx =
+extractFuncs :: [(Int, IExpr)] -> BExpr -> (IExpr, [(Int, IExpr)])
+extractFuncs ctx e =
   case e of
     BNumber n -> (INumber n, ctx)
     BIdentifier i j -> (IIdentifier i j, ctx)
     BPair e1 e2 ->
-      let (ie1, ctx1) = extractFuncs e1 ctx in
-      let (ie2, ctx2) = extractFuncs e2 ctx1 in
+      let (ie1, ctx1) = extractFuncs ctx e1 in
+      let (ie2, ctx2) = extractFuncs ctx1 e2 in
       (IPair ie1 ie2, ctx2)
     BOperator1 op e1 ->
-      let (ie1, ctx1) = extractFuncs e1 ctx in
+      let (ie1, ctx1) = extractFuncs ctx e1 in
       (IOperator1 op ie1, ctx1)
     BOperator2 op e1 e2 ->
-      let (ie1, ctx1) = extractFuncs e1 ctx in
-      let (ie2, ctx2) = extractFuncs e2 ctx1 in
+      let (ie1, ctx1) = extractFuncs ctx e1 in
+      let (ie2, ctx2) = extractFuncs ctx1 e2 in
       (IOperator2 op ie1 ie2, ctx2)
     BTrace e1 e2 ->
-      let (ie1, ctx1) = extractFuncs e1 ctx in
-      let (ie2, ctx2) = extractFuncs e2 ctx1 in
+      let (ie1, ctx1) = extractFuncs ctx e1 in
+      let (ie2, ctx2) = extractFuncs ctx1 e2 in
       (ITrace ie1 ie2, ctx2)
     BIf e1 e2 e3 ->
-      let (ie1, ctx1) = extractFuncs e1 ctx in
-      let (ie2, ctx2) = extractFuncs e2 ctx1 in
-      let (ie3, ctx3) = extractFuncs e3 ctx2 in
+      let (ie1, ctx1) = extractFuncs ctx e1 in
+      let (ie2, ctx2) = extractFuncs ctx1 e2 in
+      let (ie3, ctx3) = extractFuncs ctx2 e3 in
       (IIf ie1 ie2 ie3, ctx3)
     BFn e1 ->
-      let (ie1, ctx1) = extractFuncs e1 ctx in
+      let (ie1, ctx1) = extractFuncs ctx e1 in
       let label = allocLabel ctx1 in
       (IFn label, (label, ie1):ctx1)
     BApp e1 es ->
-      let (ie1, ctx1) = extractFuncs e1 ctx in
+      let (ie1, ctx1) = extractFuncs ctx e1 in
       let (ies, ctx2) =
-            foldr (\e (ies, ctx) -> let (ie', ctx') = extractFuncs e ctx in (ie':ies, ctx'))
+            foldr (\e (ies, ctx) -> let (ie', ctx') = extractFuncs ctx e in (ie':ies, ctx'))
                   ([], ctx1) es in
       (IApp ie1 ies, ctx2)
   where
@@ -270,7 +270,7 @@ compileFunctionBody fnname label ie =
 
 compileFunDecl :: [ConstDecl] -> [[Identifier]] -> Identifier -> Expr -> ProgramWithLabels
 compileFunDecl consts bindings id e =
-  let (ie, labeledIes) = (flip extractFuncs [] . flip toDeBruin bindings . elimBoolsExpr . desugarListsAndTuples . substConsts consts) e in
+  let (ie, labeledIes) = (extractFuncs [] . toDeBruin bindings . elimBools . desugarListsAndTuples . substConsts consts) e in
   compileFunctionBody id id ie ++ concat (map (\(label, ie) -> compileFunctionBody id (id ++ "_fn" ++ show label) ie) labeledIes)
 
 compileJml :: JmlProgram -> ProgramWithLabels
