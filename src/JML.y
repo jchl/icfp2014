@@ -19,7 +19,6 @@ import Types
   '=>'    { TokenArrow }
   fn      { TokenFn }
   fun     { TokenFun }
-  val     { TokenVal }
   const   { TokenConst }
   main    { TokenMain }
   if      { TokenIf }
@@ -46,10 +45,8 @@ ConstDecls : ConstDecl ConstDecls  { $1 : $2 }
 Declarations : Declaration Declarations { $1 : $2 }
              |                          { [] }
 Declaration : FunDecl              { $1 }
-            | ValDecl              { $1 }
 
 FunDecl : fun id Pats '=' Exp      { FunDecl $2 $3 $5 }
-ValDecl : val Pat '=' Exp          { ValDecl $2 $4 }
 
 MainDecl : main Pats '=' Exp       { MainDecl $2 $4 }
 
