@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
-import sys, re
+import sys
+import re
 
 def main():
     lines = []
     for line in sys.stdin:
         m = re.match("^[^;]*", line)
-        line = m.group()
-        line = line.strip()
+        line = m.group().strip()
         if line:
             lines.append(line)
 
