@@ -176,8 +176,8 @@ fun findGoodCells bfsResults =
 fun delta a b =
   let (ax, ay) = a in
   let (bx, by) = b in
-    if (bx == ax) and (by == ay + 1) then up
-    else if (bx == ax) and (by == ay - 1) then down
+    if (bx == ax) and (by == ay + 1) then down
+    else if (bx == ax) and (by == ay - 1) then up
     else if (bx == ax + 1) and (by == ay) then right
     else left
   end
@@ -188,7 +188,9 @@ fun deltafold f xs = if null (tail xs) then [] else (f (head xs) (head (tail xs)
 fun findDir goodCell bfsResults myLoc =
   let p = rev (path goodCell bfsResults myLoc) in
   let deltas = deltafold delta p in
+  trace deltas in
     head deltas
+  end
   end
   end
 
