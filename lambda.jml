@@ -138,8 +138,19 @@ fun bfs' frontier visited getNbrs eq stop =
     end
     end
 
-fun cellScore maze ghostLocs ghostNextLocs fruitLoc fruitTime myVitality newLocation =
-  let contents = getcell maze newLocation in
+fun simpleScore fruitLoc fruitTime newLocation contents =
+  let isFruit = (eqLoc newLocation fruitLoc) and (fruitTime > 0) in
+  let score =
+    if contents == wall then 0
+    else if isFruit then 5
+    else if contents == power then 4
+    else if contents == pill then 3
+    else 2 in
+    score
+  end
+  end
+
+fun cellScore ghostLocs ghostNextLocs fruitLoc fruitTime myVitality newLocation contents =
   let isGhost = any (map (fn loc => eqLoc newLocation loc) ghostLocs) in
   let isGhostNext = any (map (fn loc => eqLoc newLocation loc) ghostNextLocs) in
   let isFruit = (eqLoc newLocation fruitLoc) and (fruitTime > 0) in
@@ -158,13 +169,14 @@ fun cellScore maze ghostLocs ghostNextLocs fruitLoc fruitTime myVitality newLoca
   end
   end
   end
-  end
 
 fun dirScore maze ghostLocs ghostNextLocs fruitLoc fruitTime myVitality myLocation oldMove dir =
   let newLocation = offset myLocation dir in
-  let score = cellScore maze ghostLocs ghostNextLocs fruitLoc fruitTime myVitality newLocation in
+  let contents = getcell maze newLocation in
+  let score = cellScore ghostLocs ghostNextLocs fruitLoc fruitTime myVitality newLocation contents in
   let score = if (score == 2) and (dir == opposite oldMove) then 1 else score in
     (score, dir)
+  end
   end
   end
   end
@@ -266,7 +278,7 @@ fun stepper state world =
         else
           (head cachedMoves, tail cachedMoves, false)
       else if (maxscore <= 2) and (movesSinceLike > 5) then
-        let bfsResults = bfs (myLocation, getcell maze myLocation) (fn x => let (loc, t) = x in getNbrs loc maze end) (fn x y => eqLoc (fst x) (fst y)) (fn x => ((snd x) >= 10) or ((snd (fst x)) == pill) or ((snd (fst x)) == power)) in
+        let bfsResults = bfs (myLocation, getcell maze myLocation) (fn x => let (loc, t) = x in getNbrs loc maze end) (fn x y => eqLoc (fst x) (fst y)) (fn x => ((snd x) >= 10) or (let score = simpleScore fruitLoc fruitTime (fst (fst x)) (snd (fst x)) in score > 2 end)) in
         let bestCells = findBestCells (findGoodCells bfsResults) in
           if null bestCells then
             (randomdir, [], false)
