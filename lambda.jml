@@ -131,26 +131,28 @@ fun bfs' frontier visited getNbrs eq stop =
     end
     end
 
-fun dirScore maze ghostLocs ghostNextLocs myVitality myLocation dir =
-  let newLocation = offset myLocation dir in
-  let contents = getcell maze newLocation in
-  let isGhost =
-     (any (map (fn loc => eqLoc newLocation loc) ghostLocs)) or
-     (any (map (fn loc => eqLoc newLocation loc) ghostNextLocs)) in
-;  trace (newLocation, contents, isGhost) in
-  let score =
-    if (contents == wall) or
-        ((myVitality < 300 {fudge factor!}) and isGhost) then 0
-    else if isGhost then 10
-    else if (contents == pill) then 3
-    else if (contents == power) then 4
-    else 2 in
-    (score, dir)
-  end
-;  end
-  end
-  end
-  end
+fun dirScore maze ghostLocs ghostNextLocs myVitality myLocation oldMove dir =
+  if dir == opposite oldMove then (1, dir)
+  else
+    let newLocation = offset myLocation dir in
+    let contents = getcell maze newLocation in
+    let isGhost =
+       (any (map (fn loc => eqLoc newLocation loc) ghostLocs)) or
+       (any (map (fn loc => eqLoc newLocation loc) ghostNextLocs)) in
+;    trace (newLocation, contents, isGhost) in
+    let score =
+      if (contents == wall) or
+          ((myVitality < 300 {fudge factor!}) and isGhost) then 0
+      else if isGhost then 10
+      else if (contents == pill) then 3
+      else if (contents == power) then 4
+      else 2 in
+      (score, dir)
+    end
+;    end
+    end
+    end
+    end
 
 fun allNbrs loc =
   let (x, y) = loc in
@@ -214,11 +216,11 @@ fun stepper state world =
 ;  trace followMode in
 ; Pick a desired move
   let (move, like) =
-    let fwdScore = dirScore maze ghostLocs ghostNextLocs myVitality myLocation oldMove in
-    let bwdScore = (1, opposite oldMove) in
-    let leftScore = dirScore maze ghostLocs ghostNextLocs myVitality myLocation (turnleft oldMove) in
-    let rightScore = dirScore maze ghostLocs ghostNextLocs myVitality myLocation (turnright oldMove) in
-    let scores = [fwdScore, bwdScore, leftScore, rightScore] in
+    let upScore = dirScore maze ghostLocs ghostNextLocs myVitality myLocation oldMove up in
+    let rightScore = dirScore maze ghostLocs ghostNextLocs myVitality myLocation oldMove right in
+    let downScore = dirScore maze ghostLocs ghostNextLocs myVitality myLocation oldMove down in
+    let leftScore = dirScore maze ghostLocs ghostNextLocs myVitality myLocation oldMove left in
+    let scores = [upScore, rightScore, downScore, leftScore] in ; can index into this list by direction
 ;    trace scores in
     let maxscore = maximum (map (fn p => fst p) scores) in
     let bestdirs = map (fn p => snd p) (filter (fn s => (fst s) == maxscore) scores) in
