@@ -225,18 +225,18 @@ compileExpr fnname innerFnname e =
          return $ p1 ++ [Instruction $ DBUG] ++ p2
     IIf e1 e2 e3 ->
       do n <- get
+         put (n + 1)
          let lt = innerFnname ++ "_true" ++ show n
          let lf = innerFnname ++ "_false" ++ show n
          let le = innerFnname ++ "_end" ++ show n
-         put (n + 1)
          p1 <- compileExpr fnname innerFnname e1
          p2 <- compileExpr fnname innerFnname e2
          p3 <- compileExpr fnname innerFnname e3
          return $ p1 ++ [Instruction $ SEL (RefAddr lt) (RefAddr lf)] ++
-           [Instruction $ LDC 0, Instruction $ TSEL (RefAddr le) (RefAddr le)] ++
-           [Label lt] ++ p2 ++ [Instruction $ JOIN] ++
-           [Label lf] ++ p3 ++ [Instruction $ JOIN] ++
-           [Label le]
+                   [Instruction $ LDC 0, Instruction $ TSEL (RefAddr le) (RefAddr le)] ++
+                   [Label lt] ++ p2 ++ [Instruction $ JOIN] ++
+                   [Label lf] ++ p3 ++ [Instruction $ JOIN] ++
+                   [Label le]
     IFn label ->
       let lf = fnname ++ "_fn" ++ show label in
       return [Instruction $ LDF (RefAddr lf)]
@@ -250,24 +250,21 @@ compileFunctionBody fnname label ie =
   let (p, _) = runState (compileExpr fnname label ie) 0 in
   [Label $ label] ++ p ++ [Instruction $ RTN]
 
-compileFunDecl :: [ConstDecl] -> [[Identifier]] -> Identifier -> Expr -> ProgramWithLabels
-compileFunDecl consts bindings id e =
+compileDecl :: [ConstDecl] -> [[Identifier]] -> Identifier -> Expr -> ProgramWithLabels
+compileDecl consts bindings id e =
   let be = (toDeBruin bindings . desugarBools . desugarListsAndTuples . substConsts consts) e in
   let (ie, labeledIes) = runState (extractFuncs be) [] in
-  compileFunctionBody id id ie ++ concat (map (\(label, ie) -> compileFunctionBody id (id ++ "_fn" ++ show label) ie) labeledIes)
+  compileFunctionBody id id ie ++
+    concat (map (\(label, ie) -> compileFunctionBody id (id ++ "_fn" ++ show label) ie) labeledIes)
 
 compileJml :: JmlProgram -> ProgramWithLabels
-compileJml (consts, ds, (mainPats, e)) = [Instruction $ DUM (length recFuncs)] ++
-                                         map (\lf -> Instruction $ LDF (RefAddr lf)) recFuncs ++
-                                         [Instruction $ LDF (RefAddr "main"),
-                                          Instruction $ RAP (length recFuncs),
-                                          Instruction $ RTN] ++
-                                         compileFunDecl consts [recFuncs, mainPats] "main" e ++
-                                         concat (map compileDecl ds)
+compileJml (consts, funs, (mainPats, e)) = [Instruction $ DUM (length funNames)] ++
+                                             map (\lf -> Instruction $ LDF (RefAddr lf)) funNames ++
+                                             [Instruction $ LDF (RefAddr "main"),
+                                              Instruction $ RAP (length funNames),
+                                              Instruction $ RTN] ++
+                                             compileDecl consts [funNames, mainPats] "main" e ++
+                                             concat (map compileFunDecl funs)
   where
-    recFuncs = gatherRecFuncs [] ds
-
-    gatherRecFuncs fs [] = reverse fs
-    gatherRecFuncs fs ((id, pats, e):ds') = gatherRecFuncs (id:fs) ds'
-
-    compileDecl (id, pats, e) = compileFunDecl consts [pats, recFuncs, mainPats] id e
+    funNames = map (\(id, _, _) -> id) funs
+    compileFunDecl (id, pats, e) = compileDecl consts [pats, funNames, mainPats] id e
