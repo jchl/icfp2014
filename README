@@ -1,0 +1,63 @@
+Building
+========
+
+Most of the code is written in Haskell.  (There is also a tiny bit of Python).  To build, run
+'cabal build'.
+
+
+JML
+===
+
+To write my Lambda-Man AI, I create a programming language, named JML, and wrote a compiler from JML
+to GCC.  JML is a pure functional programming language with ML-like syntax.  Its features include:
+
+-   integers, booleans, n-tuples and lists
+-   recursive functions
+-   higher-order functions
+-   let-expressions
+-   infix operators (all with equal precedence...)
+-   simple top-level constant/macro definitions
+
+See src/JML.y for the full syntax.
+
+Functions may have multiple arguments, but may not be partially-applied.
+
+Let-expressions may be used to unpack tuples; however, in this case the right-hand side is evaluated
+n times!  Therefore this is not recommended unless the right-hand side is trivial.
+
+The compiler has no typechecker; I was worried that without inductive datatype declarations (which
+would have been too time-consuming to implement), static typing would be too restrictive.  As it
+happens I suspect all the code I ended up writing would happily typecheck, but the lack of static
+typing turned out to be not as painful as I'd expected.
+
+The compiler is very simple, performing no optimizations (not even tail-call optimization).
+
+
+Lambda-Man AI
+=============
+
+My Lambda-Man uses the following rules to determine its move.
+
+It first computes a "score" for each direction, based on the contents of the adjacent square,
+ranging from -3 (there is a ghost, and I'm not invincible) to 30 (there is a ghost, and I am
+invincible).  Out of all directions with the maximum score, it picks a pseudo-random direction.
+This direction is used as Lambda-Man's move, except as follows.
+
+If none of the possible directions are particuarly appealing (i.e. they are all empty or contain
+ghosts), then I allow Lambda-Man to make a few (currently 5) random moves, but if he still hasn't
+found anything interesting then a breadth-first search is performed.  The search is limited to
+squares up to 10 moves away, due to performance issues.
+
+If the search finds something of interest, then we cache the path to that something, and follow it
+(unless a ghost gets in the way).
+
+
+Ghost AI
+========
+
+My Ghost AI is hand-written in GHC, with the help of a simple Python script to compute and
+substitute instruction addresses.
+
+The ghost always tries to move towards the Lambda-Man, using the direction which is closest to the
+straight-line to the Lambda-Man, ignoring all walls and other map features, except in fright mode,
+in which case it tries to move the opposite direction.
