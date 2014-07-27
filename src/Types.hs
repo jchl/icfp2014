@@ -4,6 +4,38 @@ import Data.Maybe
 import Data.List
 
 type Identifier = String
+
+data Op1 = Not |
+           Fst |
+           Snd |
+           Atom |
+           Break |
+           Null |
+           Head |
+           Tail
+
+instance Show Op1 where
+  show Not = "not"
+  show Fst = "fst"
+  show Snd = "snd"
+  show Atom = "atom"
+  show Break = "break"
+  show Null = "null"
+  show Head = "head"
+  show Tail = "tail"
+
+ops1Map = [
+  ( "not", Not ),
+  ( "fst", Fst ),
+  ( "snd", Snd ),
+  ( "break", Break ),
+  ( "null", Null ),
+  ( "head", Head ),
+  ( "tail", Tail ) ]
+
+stringToOp1 :: String -> Op1
+stringToOp1 s = fromJust $ lookup s ops1Map
+
 data Op2 = Plus |
            Minus |
            Times |
@@ -33,30 +65,30 @@ instance Show Op2 where
   show Or = "or"
   show ListCons = "::"
 
-data Op1 = Not |
-           Fst |
-           Snd |
-           Atom |
-           Break |
-           Null |
-           Head |
-           Tail
+ops2Map = [
+  ( "+", Plus ),
+  ( "-", Minus ),
+  ( "*", Times ),
+  ( "/", Divide ),
+  ( "==", Equals ),
+  ( "!=", NotEquals ),
+  ( "<", LessThan ),
+  ( ">", GreaterThan ),
+  ( "<=", LessThanOrEquals ),
+  ( ">=", GreaterThanOrEquals ),
+  ( "and", And ),
+  ( "or", Or ),
+  ( "::", ListCons ) ]
 
-instance Show Op1 where
-  show Not = "not"
-  show Fst = "fst"
-  show Snd = "snd"
-  show Atom = "atom"
-  show Break = "break"
-  show Null = "null"
-  show Head = "head"
-  show Tail = "tail"
-
-type Pat = Identifier
+stringToOp2 :: String -> Op2
+stringToOp2 s = fromJust $ lookup s ops2Map
 
 data LetPat = IdPat Identifier |
               TuplePat [Identifier]
-              deriving Show
+
+instance Show LetPat where
+  show (IdPat id) = id
+  show (TuplePat ids) = "(" ++ intercalate ", " ids ++ ")"
 
 data Expr = Number Int |
             Boolean Bool |
@@ -68,7 +100,7 @@ data Expr = Number Int |
             Operator2 Op2 Expr Expr |
             Trace Expr Expr |
             If Expr Expr Expr |
-            Fn [Pat] Expr |
+            Fn [Identifier] Expr |
             App Expr [Expr] |
             Let LetPat Expr Expr
 
@@ -88,42 +120,7 @@ instance Show Expr where
   show (Let letpat e1 e2) = "let " ++ show letpat ++ " = " ++ show e1 ++ " in (" ++ show e2 ++ ")"
 
 type ConstDecl = (Identifier, Expr)
+type FunDecl = (Identifier, [Identifier], Expr)
+type MainDecl = ([Identifier], Expr)
 
-data Declaration = FunDecl Identifier [Pat] Expr |
-                   ValDecl Pat Expr
-                   deriving Show
-
-data MainDecl = MainDecl [Pat] Expr
-                deriving Show
-
-type JmlProgram = ([ConstDecl], [Declaration], MainDecl)
-
-ops2Map = [
-  ( "+", Plus ),
-  ( "-", Minus ),
-  ( "*", Times ),
-  ( "/", Divide ),
-  ( "==", Equals ),
-  ( "!=", NotEquals ),
-  ( "<", LessThan ),
-  ( ">", GreaterThan ),
-  ( "<=", LessThanOrEquals ),
-  ( ">=", GreaterThanOrEquals ),
-  ( "and", And ),
-  ( "or", Or ),
-  ( "::", ListCons ) ]
-
-ops1Map = [
-  ( "not", Not ),
-  ( "fst", Fst ),
-  ( "snd", Snd ),
-  ( "break", Break ),
-  ( "null", Null ),
-  ( "head", Head ),
-  ( "tail", Tail ) ]
-
-stringToOp1 :: String -> Op1
-stringToOp1 s = fromJust $ lookup s ops1Map
-
-stringToOp2 :: String -> Op2
-stringToOp2 s = fromJust $ lookup s ops2Map
+type JmlProgram = ([ConstDecl], [FunDecl], MainDecl)

@@ -265,9 +265,7 @@ compileExpr fnname innerFnname e =
 compileFunctionBody :: String -> String -> IExpr -> ProgramWithLabels
 compileFunctionBody fnname label ie =
   let (p, _) = runState (compileExpr fnname label ie) 0 in
-  let n = 0 in -- XXX
   [Label $ label] ++
---  [Instruction $ LDC n, Instruction $ DBUG] ++ -- XXX
   p ++ [Instruction $ RTN]
 
 compileFunDecl :: [ConstDecl] -> [[Identifier]] -> Identifier -> Expr -> ProgramWithLabels
@@ -276,7 +274,7 @@ compileFunDecl consts bindings id e =
   compileFunctionBody id id ie ++ concat (map (\(label, ie) -> compileFunctionBody id (id ++ "_fn" ++ show label) ie) labeledIes)
 
 compileJml :: JmlProgram -> ProgramWithLabels
-compileJml (consts, ds, MainDecl mainPats e) = [Instruction $ DUM (length recFuncs)] ++
+compileJml (consts, ds, (mainPats, e)) = [Instruction $ DUM (length recFuncs)] ++
                                                map (\lf -> Instruction $ LDF (RefAddr lf)) recFuncs ++
                                                [Instruction $ LDF (RefAddr "main"),
                                                 Instruction $ RAP (length recFuncs),
@@ -287,7 +285,6 @@ compileJml (consts, ds, MainDecl mainPats e) = [Instruction $ DUM (length recFun
     recFuncs = gatherRecFuncs [] ds
 
     gatherRecFuncs fs [] = reverse fs
-    gatherRecFuncs fs ((FunDecl id pats e):ds') = gatherRecFuncs (id:fs) ds'
-    gatherRecFuncs fs (_:ds') = gatherRecFuncs fs ds'
+    gatherRecFuncs fs ((id, pats, e):ds') = gatherRecFuncs (id:fs) ds'
 
-    compileDecl (FunDecl id pats e) = compileFunDecl consts [pats, recFuncs, mainPats] id e
+    compileDecl (id, pats, e) = compileFunDecl consts [pats, recFuncs, mainPats] id e
