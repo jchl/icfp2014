@@ -6,72 +6,73 @@ import GCC
 import Control.Monad.State
 
 substConsts :: [ConstDecl] -> Expr -> Expr
-substConsts consts e = case e of
-  Number n -> Number n
-  Boolean b -> Boolean b
-  Tuple es -> Tuple (map (substConsts consts) es)
-  List es -> List (map (substConsts consts) es)
-  Identifier id ->
-    case lookup id consts of
-      Nothing -> Identifier id
-      Just e -> e
-  Pair e1 e2 -> Pair (substConsts consts e1) (substConsts consts e2)
-  Operator1 op e -> Operator1 op (substConsts consts e)
-  Operator2 op e1 e2 -> Operator2 op (substConsts consts e1) (substConsts consts e2)
-  Trace e1 e2 -> Trace (substConsts consts e1) (substConsts consts e2)
-  If e1 e2 e3 -> If (substConsts consts e1) (substConsts consts e2) (substConsts consts e3)
-  Fn pats e -> Fn pats (substConsts consts e)
-  App e es -> App (substConsts consts e) (map (substConsts consts) es)
-  Let pat e1 e2 -> Let pat (substConsts consts e1) (substConsts consts e2)
-
-listToPair :: [Expr] -> Expr
-listToPair [] = Number 0
-listToPair (e:es) = Pair e (listToPair es)
-
-tupleToPair :: [Expr] -> Expr
-tupleToPair [e1] = e1
-tupleToPair (e:es) = Pair e (tupleToPair es)
+substConsts consts e =
+  case e of
+    Number n -> Number n
+    Boolean b -> Boolean b
+    Tuple es -> Tuple (map (substConsts consts) es)
+    List es -> List (map (substConsts consts) es)
+    Identifier id ->
+      case lookup id consts of
+        Nothing -> Identifier id
+        Just e -> e
+    Pair e1 e2 -> Pair (substConsts consts e1) (substConsts consts e2)
+    Operator1 op e -> Operator1 op (substConsts consts e)
+    Operator2 op e1 e2 -> Operator2 op (substConsts consts e1) (substConsts consts e2)
+    Trace e1 e2 -> Trace (substConsts consts e1) (substConsts consts e2)
+    If e1 e2 e3 -> If (substConsts consts e1) (substConsts consts e2) (substConsts consts e3)
+    Fn pats e -> Fn pats (substConsts consts e)
+    App e es -> App (substConsts consts e) (map (substConsts consts) es)
+    Let pat e1 e2 -> Let pat (substConsts consts e1) (substConsts consts e2)
 
 desugarListsAndTuples :: Expr -> Expr
-desugarListsAndTuples e = case e of
-  Number n -> Number n
-  Boolean b -> Boolean b
-  Tuple es -> tupleToPair (map desugarListsAndTuples es)
-  List es -> listToPair (map desugarListsAndTuples es)
-  Identifier id -> Identifier id
-  Pair e1 e2 -> Pair (desugarListsAndTuples e1) (desugarListsAndTuples e2)
-  Operator1 Null e -> Operator1 Atom (desugarListsAndTuples e)
-  Operator1 Head e -> Operator1 Fst (desugarListsAndTuples e)
-  Operator1 Tail e -> Operator1 Snd (desugarListsAndTuples e)
-  Operator1 op e -> Operator1 op (desugarListsAndTuples e)
-  Operator2 ListCons e1 e2 -> Pair (desugarListsAndTuples e1) (desugarListsAndTuples e2)
-  Operator2 op e1 e2 -> Operator2 op (desugarListsAndTuples e1) (desugarListsAndTuples e2)
-  Trace e1 e2 -> Trace (desugarListsAndTuples e1) (desugarListsAndTuples e2)
-  If e1 e2 e3 -> If (desugarListsAndTuples e1) (desugarListsAndTuples e2) (desugarListsAndTuples e3)
-  Fn pats e -> Fn pats (desugarListsAndTuples e)
-  App e es -> App (desugarListsAndTuples e) (map desugarListsAndTuples es)
-  Let pat e1 e2 -> Let pat (desugarListsAndTuples e1) (desugarListsAndTuples e2)
+desugarListsAndTuples e =
+  case e of
+    Number n -> Number n
+    Boolean b -> Boolean b
+    Tuple es -> tupleToPair (map desugarListsAndTuples es)
+    List es -> listToPair (map desugarListsAndTuples es)
+    Identifier id -> Identifier id
+    Pair e1 e2 -> Pair (desugarListsAndTuples e1) (desugarListsAndTuples e2)
+    Operator1 Null e -> Operator1 Atom (desugarListsAndTuples e)
+    Operator1 Head e -> Operator1 Fst (desugarListsAndTuples e)
+    Operator1 Tail e -> Operator1 Snd (desugarListsAndTuples e)
+    Operator1 op e -> Operator1 op (desugarListsAndTuples e)
+    Operator2 ListCons e1 e2 -> Pair (desugarListsAndTuples e1) (desugarListsAndTuples e2)
+    Operator2 op e1 e2 -> Operator2 op (desugarListsAndTuples e1) (desugarListsAndTuples e2)
+    Trace e1 e2 -> Trace (desugarListsAndTuples e1) (desugarListsAndTuples e2)
+    If e1 e2 e3 -> If (desugarListsAndTuples e1) (desugarListsAndTuples e2) (desugarListsAndTuples e3)
+    Fn pats e -> Fn pats (desugarListsAndTuples e)
+    App e es -> App (desugarListsAndTuples e) (map desugarListsAndTuples es)
+    Let pat e1 e2 -> Let pat (desugarListsAndTuples e1) (desugarListsAndTuples e2)
+  where
+    listToPair [] = Number 0
+    listToPair (e:es) = Pair e (listToPair es)
 
-elimBools :: Expr -> Expr
-elimBools e = case e of
-  Number n -> Number n
-  Boolean True -> Number 1
-  Boolean False -> Number 0
-  Tuple _ -> error "unexpected tuple"
-  List _ -> error "unexpected list"
-  Identifier id -> Identifier id
-  Pair e1 e2 -> Pair (elimBools e1) (elimBools e2)
-  Operator1 Not e -> Operator2 Minus (Number 1) (elimBools e)
-  Operator1 op e -> Operator1 op (elimBools e)
-  Operator2 And e1 e2 -> If (elimBools e1) (elimBools e2) (Number 0)
-  Operator2 Or e1 e2 -> If (elimBools e1) (Number 1) (elimBools e2)
-  Operator2 NotEquals e1 e2 -> elimBools (Operator1 Not (Operator2 Equals e1 e2))
-  Operator2 op e1 e2 -> Operator2 op (elimBools e1) (elimBools e2)
-  Trace e1 e2 -> Trace (elimBools e1) (elimBools e2)
-  If e1 e2 e3 -> If (elimBools e1) (elimBools e2) (elimBools e3)
-  Fn pats e -> Fn pats (elimBools e)
-  App e es -> App (elimBools e) (map elimBools es)
-  Let pat e1 e2 -> Let pat (elimBools e1) (elimBools e2)
+    tupleToPair [e1] = e1
+    tupleToPair (e:es) = Pair e (tupleToPair es)
+
+desugarBools :: Expr -> Expr
+desugarBools e =
+  case e of
+    Number n -> Number n
+    Boolean True -> Number 1
+    Boolean False -> Number 0
+    Tuple _ -> error "unexpected tuple"
+    List _ -> error "unexpected list"
+    Identifier id -> Identifier id
+    Pair e1 e2 -> Pair (desugarBools e1) (desugarBools e2)
+    Operator1 Not e -> Operator2 Minus (Number 1) (desugarBools e)
+    Operator1 op e -> Operator1 op (desugarBools e)
+    Operator2 And e1 e2 -> If (desugarBools e1) (desugarBools e2) (Number 0)
+    Operator2 Or e1 e2 -> If (desugarBools e1) (Number 1) (desugarBools e2)
+    Operator2 NotEquals e1 e2 -> desugarBools (Operator1 Not (Operator2 Equals e1 e2))
+    Operator2 op e1 e2 -> Operator2 op (desugarBools e1) (desugarBools e2)
+    Trace e1 e2 -> Trace (desugarBools e1) (desugarBools e2)
+    If e1 e2 e3 -> If (desugarBools e1) (desugarBools e2) (desugarBools e3)
+    Fn pats e -> Fn pats (desugarBools e)
+    App e es -> App (desugarBools e) (map desugarBools es)
+    Let pat e1 e2 -> Let pat (desugarBools e1) (desugarBools e2)
 
 data BExpr = BNumber Int |
              BIdentifier Int Int |
@@ -128,7 +129,7 @@ toDeBruin bindings e =
       where
         lookupIdent' i bindings id =
           case bindings of
-            [] -> error $  "unbound identifier: " ++ id
+            [] -> error $ "unbound identifier: " ++ id
             (b:bs) ->
               case elemIndex id b of
                 Nothing -> lookupIdent' (i + 1) bs id
@@ -265,22 +266,21 @@ compileExpr fnname innerFnname e =
 compileFunctionBody :: String -> String -> IExpr -> ProgramWithLabels
 compileFunctionBody fnname label ie =
   let (p, _) = runState (compileExpr fnname label ie) 0 in
-  [Label $ label] ++
-  p ++ [Instruction $ RTN]
+  [Label $ label] ++ p ++ [Instruction $ RTN]
 
 compileFunDecl :: [ConstDecl] -> [[Identifier]] -> Identifier -> Expr -> ProgramWithLabels
 compileFunDecl consts bindings id e =
-  let (ie, labeledIes) = (extractFuncs [] . toDeBruin bindings . elimBools . desugarListsAndTuples . substConsts consts) e in
+  let (ie, labeledIes) = (extractFuncs [] . toDeBruin bindings . desugarBools . desugarListsAndTuples . substConsts consts) e in
   compileFunctionBody id id ie ++ concat (map (\(label, ie) -> compileFunctionBody id (id ++ "_fn" ++ show label) ie) labeledIes)
 
 compileJml :: JmlProgram -> ProgramWithLabels
 compileJml (consts, ds, (mainPats, e)) = [Instruction $ DUM (length recFuncs)] ++
-                                               map (\lf -> Instruction $ LDF (RefAddr lf)) recFuncs ++
-                                               [Instruction $ LDF (RefAddr "main"),
-                                                Instruction $ RAP (length recFuncs),
-                                                Instruction $ RTN] ++
-                                               compileFunDecl consts [recFuncs, mainPats] "main" e ++
-                                               concat (map compileDecl ds)
+                                         map (\lf -> Instruction $ LDF (RefAddr lf)) recFuncs ++
+                                         [Instruction $ LDF (RefAddr "main"),
+                                          Instruction $ RAP (length recFuncs),
+                                          Instruction $ RTN] ++
+                                         compileFunDecl consts [recFuncs, mainPats] "main" e ++
+                                         concat (map compileDecl ds)
   where
     recFuncs = gatherRecFuncs [] ds
 
