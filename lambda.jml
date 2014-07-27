@@ -163,7 +163,7 @@ fun inBounds width height loc =
 fun getNbrs loc maze =
   let height = length maze in
   let width = length (head maze) in
-    filter (fn loc => getcell maze loc != wall) (filter (fn loc => inBounds width height loc) (allNbrs loc))
+    filter (fn x => let (lot, t) = x in t != wall end) (map (fn loc => (loc, getcell maze loc)) (filter (fn loc => inBounds width height loc) (allNbrs loc)))
   end
   end
 
@@ -190,8 +190,10 @@ fun stepper state world =
     trace (maxscore, maxscore <= 2, maxscore > 2) in
       if (maxscore <= 2) and (movesSinceLike > 20) then
         trace 99 in
-        let bfsResult = bfs myLocation (fn loc => getNbrs loc maze) eqLoc (fn x => let (loc, n) = x in n >= 5 end) in
+        let bfsResult = bfs (myLocation, getcell maze myLocation) (fn x => let (loc, t) = x in getNbrs loc maze end) (fn x y => eqLoc (fst x) (fst y)) (fn x => (snd x) >= 5) in
+        trace bfsResult in
           (oldMove, false)
+        end
         end
         end
       else
