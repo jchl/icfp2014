@@ -50,13 +50,13 @@ jgt EEE,e,f
 jgt FFF,b,d
 ; gy <= ly
 ; go down
-mov a,2
+mov e,2
 mov pc,HHH
 
 FFF:
 ; gy > ly
 ; go up
-mov a,0
+mov e,0
 mov pc,HHH
 
 
@@ -68,17 +68,39 @@ EEE:
 jgt GGG,a,c
 ; gx <= lx
 ; go right
-mov a,1
+mov e,1
 mov pc,HHH
 
 GGG:
 ; gx > gl
 ; go left
-mov a,3
+mov e,3
 ; fall-through
 
 
 HHH:
+; chosen direction is in e
 ; ===========================
+; reverse direction in fright mode
+
+int 3
+int 5
+; a is vitality
+; b is direction
+
+jeq GGG,a,1
+mov pc,HHH
+
+GGG: ; fright mode
+add e,2
+jlt HHH,e,4
+; e > 4; subtract 4
+sub e,4
+
+HHH: ; not fright mode
+
+; chosen (possibly reversed) direction is in e
+; ===============================
+mov a,e
 int 0
 hlt
