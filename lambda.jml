@@ -235,15 +235,22 @@ fun stepper state world =
     let bestdirs = map (fn p => snd p) (filter (fn s => (fst s) == maxscore) scores) in
     trace (maxscore, maxscore <= 2, maxscore > 2) in
       if (maxscore <= 2) and (not (null cachedMoves)) then
-        (head cachedMoves, tail cachedMoves, false)
-      else if (maxscore <= 2) and (movesSinceLike > 10) then
-        let bfsResults = bfs (myLocation, getcell maze myLocation) (fn x => let (loc, t) = x in getNbrs loc maze end) (fn x y => eqLoc (fst x) (fst y)) (fn x => ((snd x) >= 15) or ((snd (fst x)) == pill) or ((snd (fst x)) == power)) in
+        if (fst (nth (head cachedMoves) scores)) == 0 then
+          (randomchoice randsrc bestdirs, [], false)
+        else
+          (head cachedMoves, tail cachedMoves, false)
+      else if (maxscore <= 2) and (movesSinceLike > 5) then
+        let bfsResults = bfs (myLocation, getcell maze myLocation) (fn x => let (loc, t) = x in getNbrs loc maze end) (fn x y => eqLoc (fst x) (fst y)) (fn x => ((snd x) >= 10) or ((snd (fst x)) == pill) or ((snd (fst x)) == power)) in
 ;        trace bfsResults in
         let bestCells = findBestCells (findGoodCells bfsResults) in
-          if null bestCells then (randomchoice randsrc bestdirs, [], false)
+          if null bestCells then
+            (randomchoice randsrc bestdirs, [], false)
           else
             let optimalDirs = findDirs (let (x, stuff) = head bestCells in x end) bfsResults myLocation in
-              (head optimalDirs, tail optimalDirs, false)
+              if (fst (nth (head optimalDirs) scores)) == 0 then
+                (randomchoice randsrc bestdirs, [], false)
+              else
+                (head optimalDirs, tail optimalDirs, false)
             end
         end
 ;        end
