@@ -212,11 +212,18 @@ fun path targetLocT bfsResults sourceLoc =
       (fst targetLocT) :: (path prevT bfsResults sourceLoc)
     end
 
+fun possibleNextLocs maze ghostStatus =
+  let (ghostVitality, ghostLocation, ghostDirection) = ghostStatus in
+    [offset ghostLocation ghostDirection,
+     offset ghostLocation (turnright ghostDirection),
+     offset ghostLocation (turnleft ghostDirection)]
+  end
+
 fun stepper state world =
   let (maze, myStatus, ghostsStatus, fruitTime) = world in
   let (myVitality, myLocation, myDirection, lives, score) = myStatus in
   let ghostLocs = map (fn ghostStatus => let (ghostVitality, ghostLocation, ghostDirection) = ghostStatus in ghostLocation end) ghostsStatus in
-  let ghostNextLocs = map (fn ghostStatus => let (ghostVitality, ghostLocation, ghostDirection) = ghostStatus in offset ghostLocation ghostDirection end) ghostsStatus in
+  let ghostNextLocs = concat (map (fn ghostStatus => possibleNextLocs maze ghostStatus) ghostsStatus) in
 ;  trace (1, myLocation, getcell maze myLocation) in
   let (nMoves, oldMove, cachedMoves, followMode, movesSinceLike, startLocation, randsrc, randsrc_orig) = state in
   trace (nMoves, oldMove, followMode, movesSinceLike) in
