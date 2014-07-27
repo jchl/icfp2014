@@ -1,0 +1,84 @@
+int 1
+mov c,a ; lambda-man x
+mov d,b ; lambda-man y
+; c is lambda x (lx)
+; d is lambda y (ly)
+
+int 3 ; get our index
+int 5
+; a is our x (gx)
+; b is our y (gy)
+; ============================
+
+; compute abs(dx)
+jgt AAA,a,c
+; gx <= lx
+mov e,c
+sub e,a
+mov pc,BBB
+AAA:
+; gx > lx
+mov e,a
+sub e,c
+BBB:
+; e contains abs(dx)
+; ============================
+
+; compute abs(dy)
+jgt CCC,b,d
+; gy <= ly
+mov f,d
+sub f,b
+mov pc,DDD
+
+CCC:
+; gy > ly
+mov f,b
+sub f,d
+
+DDD:
+; f contains abs(dy)
+; ============================
+
+
+
+jgt EEE,e,f
+; ============================
+; abs(dx) <= abs(dy)
+; go up or down
+
+jgt FFF,b,d
+; gy <= ly
+; go down
+mov a,2
+mov pc,HHH
+
+FFF:
+; gy > ly
+; go up
+mov a,0
+mov pc,HHH
+
+
+EEE:
+; ============================
+; abs(dx) > abs(dy)
+; go left or right
+
+jgt GGG,a,c
+; gx <= lx
+; go right
+mov a,1
+mov pc,HHH
+
+GGG:
+; gx > gl
+; go left
+mov a,3
+; fall-through
+
+
+HHH:
+; ===========================
+int 0
+hlt
