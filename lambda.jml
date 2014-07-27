@@ -44,8 +44,10 @@ fun all xs = fold (fn a b => a and b) true xs
 fun any xs = fold (fn a b => a or b) false xs
 
 fun max a b = if a > b then a else b
+fun min a b = if a < b then a else b
 
 fun maximum xs = fold1 max xs
+fun minimum xs = fold1 min xs
 
 fun revappend xs ys = if null xs then ys else revappend (tail xs) ((head xs) :: ys)
 fun rev xs = revappend xs []
@@ -173,7 +175,14 @@ fun getNbrs loc maze =
 
 ; bfsResults : [((loc, t), (n, (prevloc, prevt)))]
 fun findGoodCells bfsResults =
-  filter (fn x => ((snd x) == pill) or ((snd x) == power)) (map (fn x => fst x) bfsResults)
+  filter (fn x => ((snd (fst x)) == pill) or ((snd (fst x)) == power)) bfsResults
+
+fun findBestCells goodCells =
+  if null goodCells then []
+  else
+    let closestDist = minimum (map (fn x => (fst (snd x))) goodCells) in
+      filter (fn x => (fst (snd x)) == closestDist) goodCells
+    end
 
 fun delta a b =
   let (ax, ay) = a in
@@ -228,11 +237,11 @@ fun stepper state world =
       if (maxscore <= 2) and (movesSinceLike > 10) then
         trace 99 in
         let bfsResults = bfs (myLocation, getcell maze myLocation) (fn x => let (loc, t) = x in getNbrs loc maze end) (fn x y => eqLoc (fst x) (fst y)) (fn x => {((snd x) >= 20) or} ((snd (fst x)) == pill) or ((snd (fst x)) == power)) in
-;        trace bfsResults in
-        let goodCells = findGoodCells bfsResults in
-          if null goodCells then (randomchoice randsrc bestdirs, false) else (findDir (head goodCells) bfsResults myLocation, false)
+        trace bfsResults in
+        let bestCells = findBestCells (findGoodCells bfsResults) in
+          if null bestCells then (randomchoice randsrc bestdirs, false) else (findDir (let (x, stuff) = head bestCells in x end) bfsResults myLocation, false)
         end
-;        end
+        end
         end
         end
       else
